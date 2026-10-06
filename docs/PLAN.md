@@ -2,11 +2,11 @@
 
 This plugin adds passkeys (WebAuthn) as a second-factor provider for the Human Made fork of Two Factor. A passkey works like TOTP: it is a second step after the password. There is no passwordless sign-in.
 
-Status: draft for Rob's approval. No plugin code has been written yet.
+Status: decisions agreed with Rob on 6 October 2026. No plugin code has been written yet.
 
 ## Context and fixed decisions
 
-- Target: `humanmade/two-factor` at `master` (last change January 2023), as Rob decided. The fork's 0.3.x tags come from the `force-2fa` branch (upstream 0.8.1 plus force-2FA), and `altis-security` requires `^0.3.4`. `master` is a different and older codebase. This plan uses only the `master` API. Supporting 0.3.x later would mean an adapter for different hook names, file names and core helpers (see open decision 12).
+- Target: `humanmade/two-factor` at `master` (last change January 2023), as Rob decided. The fork's 0.3.x tags come from the `force-2fa` branch (upstream 0.8.1 plus force-2FA), and `altis-security` requires `^0.3.4`. `master` is a different and older codebase. This plan uses only the `master` API. Supporting 0.3.x later would mean an adapter for different hook names, file names and core helpers (see decision 12).
 - Library: `lbuchs/webauthn` v2.2.0 (MIT, released July 2024). Its `master` branch has no functional changes since that tag. It needs PHP 8.0 or later, `ext-openssl` and `ext-mbstring`.
 - Second factor only.
 
@@ -44,9 +44,9 @@ We don't copy:
   - the key must not be flagged;
   - the page must be a secure context (HTTPS, or the host is `localhost`).
 
-  `authentication_page()` explains why no key can be used here and points to the backup links that core prints. `validate_authentication()` rejects. If passkey is the user's only provider, they are locked out until an admin removes their keys or they use backup codes (open decision 13).
+  `authentication_page()` explains why no key can be used here and points to the backup links that core prints. `validate_authentication()` rejects. If passkey is the user's only provider, they are locked out until an admin removes their keys or they use backup codes (decision 13).
 - No change to how the primary provider is chosen. The user picks it with the existing radio button. Backup codes, TOTP and email stay available as backup links under the passkey step.
-- Adding the first passkey turns the provider on server side (it adds the class to `_two_factor_enabled_providers`). The JS also ticks the checkbox on the page, so a later profile save does not switch it off again (open decision 9).
+- Adding the first passkey turns the provider on server side (it adds the class to `_two_factor_enabled_providers`). The JS also ticks the checkbox on the page, so a later profile save does not switch it off again (decision 9).
 - Removing the last passkey makes the provider unavailable, and core falls back to the next provider. If no other provider remains, the user no longer has 2FA. The remove dialog warns about this.
 
 ## Ceremonies
@@ -54,7 +54,7 @@ We don't copy:
 ### Relying party ID and origins
 
 - RP ID: by default, the host of `site_url()` (the host that serves `wp-login.php` and `wp-admin`). It can be changed with the `two_factor_passkey_rp_id` filter. Each credential stores the RP ID it was created under, and only matching credentials are offered or accepted.
-- Multisite: by default each site uses its own host. A subdomain network may want the network domain, so one passkey works on every subdomain. That is valid WebAuthn because the network domain is a registrable suffix. A domain-mapped site can never share. Open decision 7.
+- Multisite: by default each site uses its own host. A subdomain network may want the network domain, so one passkey works on every subdomain. That is valid WebAuthn because the network domain is a registrable suffix. A domain-mapped site can never share. Decision 7.
 - Allowed origins: an exact list of `scheme://host[:port]` values built from `site_url()`, `admin_url()` and `wp_login_url()`. The list covers `FORCE_SSL_ADMIN` setups where the schemes differ, and can be changed with the `two_factor_passkey_allowed_origins` filter. We check `clientDataJSON.origin` against this list before the library runs. The library's own check is a regex `rpId$` against the origin's host with no dot boundary, so `https://evilexample.com` passes for `example.com`. The browser would block that case anyway, but we want an exact match.
 - Proxies: origins are built from the configured site URLs, never from request headers, so `X-Forwarded-Host` cannot change them. A TLS-terminating proxy still needs WordPress to know the request is HTTPS (the usual `X-Forwarded-Proto` handling in `wp-config.php`). Otherwise the generated URLs are `http://` and the origin check fails. The README will say this.
 - The library accepts plain HTTP only when the RP ID is exactly `localhost`, and IP addresses are never valid RP IDs. Local and test sites must use `localhost`, not `127.0.0.1`.
@@ -86,7 +86,7 @@ Creation options:
 - `user.id` is an opaque random 32-byte handle per user (`_two_factor_passkey_user_handle`), never the WordPress user ID or login.
 - `user.name` is the login and `user.displayName` is the display name.
 - `excludeCredentials` lists the user's existing credentials, so the same authenticator cannot be added twice.
-- `attestation: "none"` (open decision 3), `userVerification: "preferred"` (open decision 4), `residentKey: "discouraged"` (open decision 5).
+- `attestation: "none"` (decision 3), `userVerification: "preferred"` (decision 4), `residentKey: "discouraged"` (decision 5).
 - Algorithms come from the library: EdDSA, ES256 and RS256.
 
 Verification: we run `processCreate()` after our origin check. We require user presence. We require user verification only if the `two_factor_passkey_require_user_verification` filter says so. We reject a credential ID the user already has, and enforce a per-user limit of 20 (filterable).
@@ -109,7 +109,7 @@ There is no extra endpoint here. It uses core's existing form and login nonce.
 ### Sign counter and cloned authenticators
 
 - Each credential stores the latest `sign_count`. Synced passkeys always report 0. The library only complains when either value is non-zero and the new value is not higher than the stored one.
-- When that happens, the signature has already been checked. The library throws `SIGNATURE_COUNTER`. Our recommendation (open decision 6):
+- When that happens, the signature has already been checked. The library throws `SIGNATURE_COUNTER`. Agreed policy (decision 6):
   - reject the login and mark the credential `flagged_at`;
   - flagged credentials cannot be used for login and appear as "possibly cloned" on the profile screen;
   - fire the `two_factor_passkey_counter_regression` action with the user and credential, so sites can alert or log it;
@@ -161,10 +161,10 @@ One user meta row per user, `_two_factor_passkey_credentials`. It holds an array
 
 - Prefix with Strauss (`brianhenryie/strauss`, currently 0.30.x). Namespace: `HM\Two_Factor_Passkey\Vendor\lbuchs\WebAuthn`. Target directory: `vendor-prefixed/`. Strauss also prefixes the static `ByteBuffer::$useBase64UrlEncoding`, so our setting cannot affect, or be affected by, another plugin's copy.
 - `lbuchs/webauthn` goes in `require-dev`, with Strauss's `packages` and `delete_vendor_packages` set. If a site installs our plugin with Composer, it then gets no second, unprefixed copy in its root `vendor/`.
-- Commit `vendor-prefixed/` (open decision 10). The plugin then works from a git checkout or a zip with no build step. A CI job runs Strauss again and fails if `git diff` is not empty.
+- Commit `vendor-prefixed/` (decision 10). The plugin then works from a git checkout or a zip with no build step. A CI job runs Strauss again and fails if `git diff` is not empty.
 - Runtime loading: `vendor-prefixed/autoload.php` plus `require_once` for our own files. There is no Composer autoloader at runtime.
 - Licence: the library is MIT (Lukas Buchs; the CBOR and ByteBuffer parts are by Thomas Bleeker), which is compatible with GPL-2.0. We keep its `LICENSE` file inside `vendor-prefixed/` and credit it in the README. Strauss adds a "modified by" note to the file headers, which MIT allows.
-- Composer metadata: `"type": "wordpress-plugin"`, `"require": { "php": ">=8.2", "ext-openssl": "*", "ext-mbstring": "*" }`. We don't put `humanmade/two-factor` in `require` (open decision 2).
+- Composer metadata: `"type": "wordpress-plugin"`, `"require": { "php": ">=8.2", "ext-openssl": "*", "ext-mbstring": "*" }`. We don't put `humanmade/two-factor` in `require` (decision 2).
 
 ## Testing
 
@@ -211,7 +211,7 @@ One user meta row per user, `_two_factor_passkey_credentials`. It holds an array
 
 ### Local environment
 
-Playground CLI for E2E (as briefed). For PHPUnit we recommend `@wordpress/env` (Docker, which is installed here), because it ships a PHPUnit-ready tests container with MySQL. Open decision 11.
+Playground CLI for E2E (as briefed). For PHPUnit we use `@wordpress/env` (Docker), because it ships a PHPUnit-ready tests container with MySQL. Decision 11.
 
 ## Human Made standards and CI
 
@@ -226,7 +226,7 @@ Playground CLI for E2E (as briefed). For PHPUnit we recommend `@wordpress/env` (
 ## Known risks
 
 - The fork's `master` uses the same U2F library code that needed a PHP 8.4 fix on `force-2fa`. Expect deprecation notices on PHP 8.4 and later from the fork, not from us. E2E will show whether anything is fatal.
-- `master` has no re-validation. Anyone holding a logged-in session can add a passkey without re-entering the password or second factor (open decision 8).
+- `master` has no re-validation. Anyone holding a logged-in session can add a passkey without re-entering the password or second factor (decision 8).
 - `master` has no rate limiting on the 2FA step. Passkeys cannot be brute-forced, but other providers on the same account can. That is out of scope here.
 - `master` hooks only `wp_login` and has no `authenticate` filter, unlike 0.3.4 (the fork also has an unmerged `fix/xmlrpc-bypass` branch). XML-RPC and application-password logins never reach `wp_login`, so they skip every second factor, passkeys included. This plugin cannot fix that. It is a property of the chosen base.
 
@@ -238,20 +238,20 @@ Each checkpoint is one branch and one PR against `main`.
 2. **Ceremonies in the browser.** REST routes, the profile UI, the login step script, and the Playwright suite in CI with screenshots of the profile and login step on the PR.
 3. **Hardening and docs.** The force-2FA screen, multisite RP ID behaviour, counter-regression UI and action, interim login, uninstall, the README, and the remaining E2E scenarios.
 
-## Open decisions for Rob
+## Decisions
 
-Each has a recommendation.
+Rob agreed with every recommendation on 6 October 2026. Each item records the decision and why.
 
-1. **Minimum versions.** Recommend PHP 8.2 (the library needs 8.0, 8.1 has been end-of-life since December 2025, and Altis requires 8.2) and WordPress 6.6. Nothing in the plugin needs a newer WordPress API. CI tests the minimum and the latest.
-2. **Declaring the dependency on two-factor.** Recommend a runtime check (`class_exists( 'Two_Factor_Provider' )`) with an admin notice. No `Requires Plugins: two-factor` header: it only sees plugins in `wp-content/plugins` with that exact slug, so it blocks activation where two-factor is loaded as an mu-plugin or by Composer. Also, the fork's headers (`Version: 0.1-dev`) give us nothing to pin against. Composer lists `humanmade/two-factor` under `suggest` only.
-3. **Attestation.** Recommend requesting `none`, accepting any format the library knows, and loading no root certificates, so we make no trust decision from attestation. Restricting to `['none']` only would make registration fail if a browser or authenticator still sends self-attestation. If a client later needs "only these authenticator models", that is a separate feature (AAGUID allow-list plus the FIDO Metadata Service).
-4. **User verification.** Recommend `preferred` in requests, not required at verification. The password is already the first factor, and requiring UV would force a PIN on many security keys. A filter lets a site require it.
-5. **Resident (discoverable) keys.** Recommend `discouraged`. Second-factor use does not need a discoverable credential, and this saves the limited slots on hardware keys. Phones and password managers still create synced passkeys. The trade-off: passwordless sign-in later would need users to add their keys again.
-6. **Cloned-authenticator policy.** Recommend: reject the login, flag and disable the key, show it on the profile, and fire an action. Other options are to reject only that one attempt, or to log and allow.
-7. **Multisite RP ID.** Recommend each site's own host by default, with a filter, plus documented code to use the network domain on subdomain networks. We don't recommend the network domain as default, because domain-mapped sites would silently lose their keys.
-8. **Re-authentication before adding a passkey.** `master` has no re-validation. Recommend v1 matches TOTP on `master` (no extra step) and the README states the risk. The alternative is to ask for the password again before showing creation options. That adds a small step and some code.
-9. **Turning the provider on automatically after the first passkey.** Recommend yes, server side plus the checkbox on the page. Otherwise a user can add a key, forget the checkbox, and think they are protected.
-10. **Committing `vendor-prefixed/`.** Recommend committing it, with a CI drift check. The alternative is a release build that produces a zip. That needs release tooling and means a plain git checkout does not work.
-11. **PHPUnit environment.** Recommend `@wordpress/env` for PHPUnit (Docker), next to Playground for E2E. Alternatives: Playground for both (the WP test suite on SQLite needs extra wiring), or ddev.
+1. **Minimum versions.** PHP 8.2 (the library needs 8.0, 8.1 has been end-of-life since December 2025, and Altis requires 8.2) and WordPress 6.6. Nothing in the plugin needs a newer WordPress API. CI tests the minimum and the latest.
+2. **Declaring the dependency on two-factor.** A runtime check (`class_exists( 'Two_Factor_Provider' )`) with an admin notice. No `Requires Plugins: two-factor` header: it only sees plugins in `wp-content/plugins` with that exact slug, so it blocks activation where two-factor is loaded as an mu-plugin or by Composer. Also, the fork's headers (`Version: 0.1-dev`) give us nothing to pin against. Composer lists `humanmade/two-factor` under `suggest` only.
+3. **Attestation.** Request `none`, accepting any format the library knows, and loading no root certificates, so we make no trust decision from attestation. Restricting to `['none']` only would make registration fail if a browser or authenticator still sends self-attestation. If a client later needs "only these authenticator models", that is a separate feature (AAGUID allow-list plus the FIDO Metadata Service).
+4. **User verification.** `preferred` in requests, not required at verification. The password is already the first factor, and requiring UV would force a PIN on many security keys. A filter lets a site require it.
+5. **Resident (discoverable) keys.** `discouraged`. Second-factor use does not need a discoverable credential, and this saves the limited slots on hardware keys. Phones and password managers still create synced passkeys. The trade-off: passwordless sign-in later would need users to add their keys again.
+6. **Cloned-authenticator policy.** Reject the login, flag and disable the key, show it on the profile, and fire an action. Rejected options: reject only that one attempt, or log and allow.
+7. **Multisite RP ID.** Each site's own host by default, with a filter, plus documented code to use the network domain on subdomain networks. The network domain is not the default, because domain-mapped sites would silently lose their keys.
+8. **Re-authentication before adding a passkey.** `master` has no re-validation. v1 matches TOTP on `master` (no extra step) and the README states the risk. Not chosen: asking for the password again before showing creation options. That adds a small step and some code.
+9. **Turning the provider on automatically after the first passkey.** Yes, server side plus the checkbox on the page. Otherwise a user can add a key, forget the checkbox, and think they are protected.
+10. **Committing `vendor-prefixed/`.** Commit it, with a CI drift check. Not chosen: a release build that produces a zip. That needs release tooling and means a plain git checkout does not work.
+11. **PHPUnit environment.** `@wordpress/env` for PHPUnit (Docker), next to Playground for E2E. Not chosen: Playground for both (the WP test suite on SQLite needs extra wiring), or ddev.
 12. **Fork 0.3.x / Altis.** Out of scope for v1 by Rob's decision. Noted only so the provider class name and meta keys are chosen to stay the same if an adapter is added later.
-13. **No usable passkey at the login step.** This covers a user whose only provider is passkey, when none of their keys can be used on this request (another RP ID, all flagged, or not HTTPS). Recommend blocking the login: the passkey step shows why and offers any backup methods, and an admin can remove the keys. That is the safe failure for a 2FA plugin. The alternative is to skip the second factor. `master` has no middle ground, because the same availability check drives both login routing and the profile checkboxes.
+13. **No usable passkey at the login step.** This covers a user whose only provider is passkey, when none of their keys can be used on this request (another RP ID, all flagged, or not HTTPS). Block the login: the passkey step shows why and offers any backup methods, and an admin can remove the keys. That is the safe failure for a 2FA plugin. Not chosen: skipping the second factor. `master` has no middle ground, because the same availability check drives both login routing and the profile checkboxes.
