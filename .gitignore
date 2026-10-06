@@ -1,0 +1,8 @@
+/vendor/
+/node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+.phpunit.result.cache
+.DS_Store
