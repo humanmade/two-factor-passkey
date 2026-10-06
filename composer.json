@@ -1,0 +1,57 @@
+{
+	"name": "humanmade/two-factor-passkey",
+	"description": "Passkey (WebAuthn) second-factor provider for the Human Made Two Factor plugin.",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.2",
+		"ext-openssl": "*",
+		"ext-mbstring": "*"
+	},
+	"require-dev": {
+		"brianhenryie/strauss": "^0.30",
+		"humanmade/coding-standards": "^2.5",
+		"humanmade/two-factor": "dev-master",
+		"lbuchs/webauthn": "^2.2",
+		"phpunit/phpunit": "^9.6",
+		"yoast/phpunit-polyfills": "^1.1"
+	},
+	"suggest": {
+		"humanmade/two-factor": "Required at runtime. Load it as a plugin or mu-plugin."
+	},
+	"config": {
+		"platform": {
+			"php": "8.2"
+		},
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"extra": {
+		"strauss": {
+			"target_directory": "vendor-prefixed",
+			"namespace_prefix": "HM\\Two_Factor_Passkey\\Vendor\\",
+			"classmap_prefix": "HM_Two_Factor_Passkey_Vendor_",
+			"constant_prefix": "HM_TWO_FACTOR_PASSKEY_VENDOR_",
+			"packages": [
+				"lbuchs/webauthn"
+			],
+			"delete_vendor_packages": false,
+			"update_call_sites": false,
+			"include_modified_date": false,
+			"include_author": false,
+			"exclude_from_copy": {
+				"file_patterns": [
+					"~^lbuchs/webauthn/_test/~"
+				]
+			}
+		}
+	},
+	"scripts": {
+		"prefix-namespaces": "vendor/bin/strauss",
+		"post-install-cmd": "@prefix-namespaces",
+		"post-update-cmd": "@prefix-namespaces",
+		"lint": "phpcs",
+		"test": "phpunit"
+	}
+}

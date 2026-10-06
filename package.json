@@ -1,0 +1,11 @@
+{
+	"name": "two-factor-passkey",
+	"private": true,
+	"scripts": {
+		"env": "wp-env",
+		"test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/two-factor-passkey vendor/bin/phpunit"
+	},
+	"devDependencies": {
+		"@wordpress/env": "^11.16.0"
+	}
+}

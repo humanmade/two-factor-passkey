@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<ruleset name="Two Factor Passkey">
+	<description>Coding standards for the Two Factor Passkey plugin.</description>
+
+	<rule ref="HM" />
+
+	<file>plugin.php</file>
+	<file>inc</file>
+	<file>tests</file>
+
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/vendor-prefixed/*</exclude-pattern>
+
+	<arg name="extensions" value="php" />
+	<arg name="colors" />
+	<arg value="sp" />
+
+	<config name="testVersion" value="8.2-" />
+	<config name="minimum_wp_version" value="6.6" />
+	<config name="minimum_supported_wp_version" value="6.6" />
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="two-factor-passkey" />
+			</property>
+		</properties>
+	</rule>
+
+	<!-- inc/class-two-factor-passkey.php holds a deliberately global class: its name is the provider key the host plugin looks up. -->
+	<rule ref="PSR1.Classes.ClassDeclaration.MissingNamespace">
+		<exclude-pattern>*/inc/class-two-factor-passkey\.php</exclude-pattern>
+	</rule>
+	<rule ref="HM.Functions.NamespacedFunctions.MissingNamespace">
+		<exclude-pattern>*/inc/class-two-factor-passkey\.php</exclude-pattern>
+	</rule>
+
+	<!-- Test method names describe the behaviour, and tests/php holds the Tests namespace. -->
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="HM.Files.NamespaceDirectoryName.NameMismatch">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+</ruleset>
