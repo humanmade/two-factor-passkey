@@ -48,7 +48,10 @@
 		}
 	},
 	"scripts": {
-		"prefix-namespaces": "vendor/bin/strauss",
+		"prefix-namespaces": [
+			"vendor/bin/strauss",
+			"@php -r \"@unlink('vendor-prefixed/composer/installed.php');\""
+		],
 		"post-install-cmd": "@prefix-namespaces",
 		"post-update-cmd": "@prefix-namespaces",
 		"lint": "phpcs",
