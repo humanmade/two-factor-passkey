@@ -3,9 +3,12 @@
 	"private": true,
 	"scripts": {
 		"env": "wp-env",
-		"test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/two-factor-passkey vendor/bin/phpunit"
+		"test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/two-factor-passkey vendor/bin/phpunit",
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
-		"@wordpress/env": "^11.16.0"
+		"@playwright/test": "1.63.0",
+		"@wordpress/env": "^11.16.0",
+		"@wp-playground/cli": "3.1.57"
 	}
 }

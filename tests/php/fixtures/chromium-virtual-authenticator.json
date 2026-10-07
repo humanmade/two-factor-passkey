@@ -1,0 +1,87 @@
+{
+	"rp_id": "localhost",
+	"origin": "http://localhost:9400",
+	"user_handle": "Qfp3h7aDmoCjdIJr6gTsfhLDFZB1OpajgNksygQKlI8",
+	"creation_options": {
+		"rp": {
+			"name": "My WordPress Website",
+			"id": "localhost"
+		},
+		"authenticatorSelection": {
+			"userVerification": "preferred",
+			"residentKey": "discouraged",
+			"requireResidentKey": false
+		},
+		"user": {
+			"id": "Qfp3h7aDmoCjdIJr6gTsfhLDFZB1OpajgNksygQKlI8",
+			"name": "admin",
+			"displayName": "admin"
+		},
+		"pubKeyCredParams": [
+			{
+				"type": "public-key",
+				"alg": -8
+			},
+			{
+				"type": "public-key",
+				"alg": -7
+			},
+			{
+				"type": "public-key",
+				"alg": -257
+			}
+		],
+		"attestation": "none",
+		"timeout": 300000,
+		"challenge": "2H7QAcOfiRDlGAOaQ6zD2GUW6ZwnjmTG1-CE84wGMto",
+		"excludeCredentials": []
+	},
+	"registration_response": {
+		"authenticatorAttachment": "platform",
+		"clientExtensionResults": {},
+		"id": "pCEIoUOzJqJfse7uvp0-lb1vil0RzesHgDSZ66dxvzY",
+		"rawId": "pCEIoUOzJqJfse7uvp0-lb1vil0RzesHgDSZ66dxvzY",
+		"response": {
+			"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViBSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIKQhCKFDsyaiX7Hu7r6dPpW9b4pdEc3rB4A0meuncb82pAEBAycgBiFYIAMJsVDb9NxpReA4jX2s1lwqJgmautRa1LSquPDBhbe8",
+			"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIKQhCKFDsyaiX7Hu7r6dPpW9b4pdEc3rB4A0meuncb82pAEBAycgBiFYIAMJsVDb9NxpReA4jX2s1lwqJgmautRa1LSquPDBhbe8",
+			"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiMkg3UUFjT2ZpUkRsR0FPYVE2ekQyR1VXNlp3bmptVEcxLUNFODR3R010byIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTQwMCIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+			"publicKey": "MCowBQYDK2VwAyEAAwmxUNv03GlF4DiNfazWXComCZq61FrUtKq48MGFt7w",
+			"publicKeyAlgorithm": -8,
+			"transports": [
+				"internal"
+			]
+		},
+		"type": "public-key"
+	},
+	"request_options": {
+		"timeout": 300000,
+		"challenge": "aoVM37Ycz5p4xVzlczHjd6oxtKst8xWEDcMzhPgwzhU",
+		"userVerification": "preferred",
+		"rpId": "localhost",
+		"allowCredentials": [
+			{
+				"id": "pCEIoUOzJqJfse7uvp0-lb1vil0RzesHgDSZ66dxvzY",
+				"transports": [
+					"usb",
+					"nfc",
+					"ble",
+					"hybrid",
+					"internal"
+				],
+				"type": "public-key"
+			}
+		]
+	},
+	"assertion_response": {
+		"authenticatorAttachment": "platform",
+		"clientExtensionResults": {},
+		"id": "pCEIoUOzJqJfse7uvp0-lb1vil0RzesHgDSZ66dxvzY",
+		"rawId": "pCEIoUOzJqJfse7uvp0-lb1vil0RzesHgDSZ66dxvzY",
+		"response": {
+			"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+			"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiYW9WTTM3WWN6NXA0eFZ6bGN6SGpkNm94dEtzdDh4V0VEY016aFBnd3poVSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTQwMCIsImNyb3NzT3JpZ2luIjpmYWxzZX0",
+			"signature": "OpdZdG-gD8Yp83WO590WNTsUMM6lGj9J7s-jI6yivsJJ2smsPKWGduMtZkFQZvPgwMZxeyNHf2EgjQUXjG05AQ"
+		},
+		"type": "public-key"
+	}
+}
