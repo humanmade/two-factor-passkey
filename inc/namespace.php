@@ -101,3 +101,21 @@ function enable_provider_for_user( int $user_id ): void {
 	$enabled[] = PROVIDER_KEY;
 	update_user_meta( $user_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, $enabled );
 }
+
+/**
+ * Delete every user's passkeys, user handles and pending challenges.
+ *
+ * User meta is shared by the whole network, so this covers multisite too.
+ */
+function delete_all_data(): void {
+	$keys = [
+		Credential_Store::META_KEY,
+		Credential_Store::HANDLE_META_KEY,
+		Challenge_Store::META_KEY_PREFIX . Challenge_Store::CREATE,
+		Challenge_Store::META_KEY_PREFIX . Challenge_Store::GET,
+	];
+
+	foreach ( $keys as $key ) {
+		delete_metadata( 'user', 0, $key, '', true );
+	}
+}
