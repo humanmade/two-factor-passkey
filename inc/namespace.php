@@ -32,6 +32,30 @@ function load(): void {
 	}
 
 	add_filter( 'two_factor_providers', __NAMESPACE__ . '\\register_provider' );
+	add_action( 'init', __NAMESPACE__ . '\\register_assets' );
+	add_action( 'rest_api_init', [ REST_Controller::class, 'register_routes' ] );
+}
+
+/**
+ * Register the scripts and styles used on the profile and login screens.
+ */
+function register_assets(): void {
+	$url = plugin_dir_url( PLUGIN_FILE ) . 'assets/';
+
+	wp_register_script( 'two-factor-passkey-webauthn', $url . 'js/webauthn.js', [], VERSION, true );
+	wp_register_script(
+		'two-factor-passkey-profile',
+		$url . 'js/profile.js',
+		[ 'two-factor-passkey-webauthn', 'wp-api-fetch', 'wp-i18n', 'wp-a11y' ],
+		VERSION,
+		true
+	);
+	wp_register_script( 'two-factor-passkey-login', $url . 'js/login.js', [ 'two-factor-passkey-webauthn', 'wp-i18n' ], VERSION, true );
+	wp_register_style( 'two-factor-passkey-profile', $url . 'css/profile.css', [], VERSION );
+	wp_register_style( 'two-factor-passkey-login', $url . 'css/login.css', [ 'login' ], VERSION );
+
+	wp_set_script_translations( 'two-factor-passkey-profile', 'two-factor-passkey' );
+	wp_set_script_translations( 'two-factor-passkey-login', 'two-factor-passkey' );
 }
 
 /**

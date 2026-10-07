@@ -1,0 +1,27 @@
+.two-factor-passkey-login [hidden] {
+	display: none !important;
+}
+
+.two-factor-passkey-login .two-factor-passkey-start {
+	float: none;
+	width: 100%;
+	margin: 8px 0 0;
+}
+
+.two-factor-passkey-login .two-factor-passkey-status:empty {
+	display: none;
+}
+
+.two-factor-passkey-login .two-factor-passkey-status,
+.two-factor-passkey-error {
+	margin: 16px 0 0;
+	padding: 8px 12px;
+	border-left: 4px solid #72aee6;
+	background: #f6f7f7;
+}
+
+.two-factor-passkey-login .two-factor-passkey-status.is-error,
+.two-factor-passkey-error {
+	border-left-color: #d63638;
+	background: #fcf0f1;
+}

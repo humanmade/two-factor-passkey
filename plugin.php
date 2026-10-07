@@ -27,5 +27,7 @@ require_once __DIR__ . '/inc/class-relying-party.php';
 require_once __DIR__ . '/inc/class-challenge-store.php';
 require_once __DIR__ . '/inc/class-credential-store.php';
 require_once __DIR__ . '/inc/class-ceremony.php';
+require_once __DIR__ . '/inc/class-rest-controller.php';
+require_once __DIR__ . '/inc/class-profile-ui.php';
 
 bootstrap();
