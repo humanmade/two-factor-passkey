@@ -50,6 +50,7 @@ jobs:
       - name: Lint PHP files
         run: |
           php -l plugin.php
+          php -l uninstall.php
           find inc -name '*.php' -print0 | xargs -0 -n1 php -l
 
   vendor:
@@ -120,6 +121,38 @@ jobs:
 
       - name: Run PHPUnit
         run: npm run test:php
+
+  phpunit-multisite:
+    name: PHPUnit multisite (PHP 8.2, WP latest)
+    runs-on: ubuntu-latest
+    env:
+      WP_ENV_PHP_VERSION: '8.2'
+      WP_ENV_CORE: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Start wp-env
+        run: npm run env -- start
+
+      - name: Run PHPUnit in multisite mode
+        run: npm run test:php:multisite
 
   e2e:
     name: Playwright end to end
