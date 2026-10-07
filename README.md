@@ -34,6 +34,8 @@ With Composer, add the repository as a VCS repository:
 }
 ```
 
+The package type is `wordpress-plugin`, so the project needs `composer/installers` (or a similar installer) to put it in `wp-content/plugins/`. Without one, Composer puts it in `vendor/` and WordPress never loads it.
+
 If Two Factor is not active, the plugin shows an admin notice and does nothing else.
 
 ## Using it
