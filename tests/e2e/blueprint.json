@@ -22,7 +22,7 @@
 		},
 		{
 			"step": "runPHP",
-			"code": "<?php require '/wordpress/wp-load.php'; wp_insert_user( [ 'user_login' => 'editor', 'user_pass' => 'password', 'user_email' => 'editor@example.com', 'role' => 'editor' ] ); $admin = get_user_by( 'login', 'admin' ); update_user_meta( $admin->ID, '_two_factor_backup_codes', [ wp_hash_password( '12345678' ) ] );"
+			"code": "<?php require '/wordpress/wp-load.php'; wp_insert_user( [ 'user_login' => 'editor', 'user_pass' => 'password', 'user_email' => 'editor@example.com', 'role' => 'editor' ] ); wp_insert_user( [ 'user_login' => 'author', 'user_pass' => 'password', 'user_email' => 'author@example.com', 'role' => 'author' ] ); update_option( '_two_factor_forced_roles', [ 'author' ] ); $admin = get_user_by( 'login', 'admin' ); update_user_meta( $admin->ID, '_two_factor_backup_codes', [ wp_hash_password( '12345678' ) ] );\n// Created last: the e2e global setup waits for this user to exist.\nwp_insert_user( [ 'user_login' => 'contributor', 'user_pass' => 'password', 'user_email' => 'contributor@example.com', 'role' => 'contributor' ] );\n"
 		}
 	]
 }

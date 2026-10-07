@@ -2,7 +2,7 @@
 
 This plugin adds passkeys (WebAuthn) as a second-factor provider for the Human Made fork of Two Factor. A passkey works like TOTP: it is a second step after the password. There is no passwordless sign-in.
 
-Status: decisions agreed with Rob on 6 October 2026. No plugin code has been written yet.
+Status: decisions agreed with Rob on 6 October 2026, and implemented in three checkpoints (PRs #2 to #4). This file records the design and its reasons. The README describes current behaviour.
 
 ## Context and fixed decisions
 
@@ -140,7 +140,7 @@ One user meta row per user, `_two_factor_passkey_credentials`. It holds an array
 ```
 
 - One array, not one meta row per key. During login the user is already known, so we never search across users, and the list is small. Rename and delete become a simple read, change, write.
-- No global uniqueness check across users. The WebAuthn spec asks for one so that a discoverable login cannot be mapped to the wrong account. In a second-factor flow we only look at the signed-in user's own keys, so a duplicate on another account cannot be used. The PR will say this.
+- No global uniqueness check across users. The WebAuthn spec asks for one so that a discoverable login cannot be mapped to the wrong account. In a second-factor flow we only look at the signed-in user's own keys, so a duplicate on another account cannot be used.
 - We don't store attestation certificates. We make no trust decision from them (see attestation).
 - Names: plain text, at most 100 characters, filtered with `sanitize_text_field`. The default is "Passkey N". We don't map AAGUIDs to authenticator names in v1.
 - Uninstall (`uninstall.php`) removes every `_two_factor_passkey_*` meta key. On multisite it does the same, because user meta is network-wide.
@@ -195,7 +195,7 @@ One user meta row per user, `_two_factor_passkey_credentials`. It holds an array
 
 ### Playwright end to end
 
-- WordPress Playground CLI (`@wp-playground/cli`) started by Playwright's `webServer` on `http://localhost:9400`. The site URL must be `localhost`, not `127.0.0.1`, because IP addresses are not valid RP IDs. I haven't yet checked the exact CLI flag for setting the site URL; checkpoint 1 confirms it. A blueprint installs the fork from `https://github.com/humanmade/two-factor/archive/refs/heads/master.zip` (it unpacks as `two-factor-master/`, which is fine because we check for the class, not the slug), mounts this plugin, and creates an admin and an editor.
+- WordPress Playground CLI (`@wp-playground/cli`) started by Playwright's `webServer` on `http://localhost:9400`. The site URL must be `localhost`, not `127.0.0.1`, because IP addresses are not valid RP IDs. The CLI sets this with `--site-url`. The blueprint must also set `preferredVersions`, or the `--php` flag is ignored. A blueprint installs the fork from `https://github.com/humanmade/two-factor/archive/refs/heads/master.zip` (it unpacks as `two-factor-master/`, which is fine because we check for the class, not the slug), mounts this plugin, and creates an admin and an editor.
 - Chromium only, `workers: 1`. Each test opens a CDP session and calls `WebAuthn.enable`, then `WebAuthn.addVirtualAuthenticator` with `{ protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true }`.
 - Scenarios:
   - add a passkey on the profile screen;
@@ -207,7 +207,7 @@ One user meta row per user, `_two_factor_passkey_credentials`. It holds an array
   - the interim login (session-expired modal) with a passkey.
 - Screenshots of the profile screen and the login step are saved and attached to each PR. Traces are kept when a test fails.
 - Process hygiene: one browser at a time. Playwright starts and stops Playground. After each local run, `pgrep -f playground` and `pgrep -f chrom` must return nothing.
-- First thing to check in checkpoint 1: that Playground's PHP build has working OpenSSL EC support (`openssl_get_curve_names()` includes `prime256v1`, and `openssl_verify` works with ES256). If not, E2E needs another environment.
+- Playground's PHP build can verify ES256 and RS256 signatures, which is all the server needs. It cannot generate keys without an `openssl.cnf`, so keys always come from the browser's virtual authenticator.
 
 ### Local environment
 

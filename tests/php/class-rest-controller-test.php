@@ -41,6 +41,10 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 		$this->set_site_url( 'https://example.org' );
 		$this->admin_id = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		if ( is_multisite() ) {
+			// Only super admins can edit other users on a network.
+			grant_super_admin( $this->admin_id );
+		}
 		$this->editor_id = self::factory()->user->create( [ 'role' => 'editor' ] );
 	}
 

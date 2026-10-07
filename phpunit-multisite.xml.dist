@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<phpunit
+	bootstrap="tests/bootstrap.php"
+	backupGlobals="false"
+	colors="true"
+	convertErrorsToExceptions="true"
+	convertNoticesToExceptions="true"
+	convertWarningsToExceptions="true"
+	convertDeprecationsToExceptions="true"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+>
+	<testsuites>
+		<testsuite name="two-factor-passkey">
+			<directory prefix="class-" suffix="-test.php">./tests/php</directory>
+		</testsuite>
+	</testsuites>
+	<php>
+		<const name="WP_TESTS_MULTISITE" value="1"/>
+	</php>
+</phpunit>

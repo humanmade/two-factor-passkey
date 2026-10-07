@@ -15,6 +15,7 @@ export default defineConfig( {
 	workers: 1,
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? [ [ 'github' ], [ 'list' ] ] : 'list',
+	globalSetup: './tests/e2e/global-setup.ts',
 	use: {
 		baseURL: `http://localhost:${ PORT }`,
 		trace: 'retain-on-failure',
