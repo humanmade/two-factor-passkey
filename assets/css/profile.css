@@ -35,3 +35,7 @@
 	display: block;
 	overflow-x: auto;
 }
+
+.two-factor-passkey-settings .two-factor-passkey-table th {
+	text-align: left;
+}

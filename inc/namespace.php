@@ -52,6 +52,7 @@ function register_assets(): void {
 	);
 	wp_register_script( 'two-factor-passkey-login', $url . 'js/login.js', [ 'two-factor-passkey-webauthn', 'wp-i18n' ], VERSION, true );
 	wp_register_style( 'two-factor-passkey-profile', $url . 'css/profile.css', [], VERSION );
+	wp_register_style( 'two-factor-passkey-login', $url . 'css/login.css', [ 'login' ], VERSION );
 
 	wp_set_script_translations( 'two-factor-passkey-profile', 'two-factor-passkey' );
 	wp_set_script_translations( 'two-factor-passkey-login', 'two-factor-passkey' );

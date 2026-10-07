@@ -32,8 +32,9 @@
 
 	let submitted = false;
 
-	function setStatus( message ) {
+	function setStatus( message, isError ) {
 		status.textContent = message;
+		status.classList.toggle( 'is-error', Boolean( isError ) );
 	}
 
 	async function start() {
@@ -52,9 +53,9 @@
 			HTMLFormElement.prototype.submit.call( form );
 		} catch ( error ) {
 			if ( error && error.name === 'NotAllowedError' ) {
-				setStatus( __( 'The passkey request was cancelled or timed out. Select Use passkey to try again, or use another method below.', 'two-factor-passkey' ) );
+				setStatus( __( 'The passkey request was cancelled or timed out. Select Use passkey to try again, or use another method below.', 'two-factor-passkey' ), true );
 			} else {
-				setStatus( __( 'Your passkey could not be used. Select Use passkey to try again, or use another method below.', 'two-factor-passkey' ) );
+				setStatus( __( 'Your passkey could not be used. Select Use passkey to try again, or use another method below.', 'two-factor-passkey' ), true );
 			}
 			button.disabled = false;
 		}

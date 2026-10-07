@@ -67,6 +67,8 @@ class Two_Factor_Passkey extends Two_Factor_Provider {
 	 * @param WP_User $user User signing in.
 	 */
 	public function authentication_page( $user ) {
+		wp_enqueue_style( 'two-factor-passkey-login' );
+
 		$options = Ceremony::get_request_options( $user );
 		$error = is_wp_error( $options ) ? $options : $this->last_error;
 

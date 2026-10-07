@@ -61,7 +61,7 @@ test.describe( 'passkey second factor', () => {
 		await expect( primaryRadio( page, PROVIDER ) ).toBeChecked();
 
 		await saveScreenshot(
-			page.locator( 'table.form-table', { has: page.locator( '.two-factor-methods-table' ) } ),
+			page.locator( '.two-factor-methods-table tr', { has: page.locator( '.two-factor-passkey-settings' ) } ),
 			'profile-passkeys'
 		);
 	} );
@@ -80,7 +80,7 @@ test.describe( 'passkey second factor', () => {
 
 		await login( page, 'admin', 'password' );
 		await expect( page.locator( 'form#loginform .two-factor-passkey-login' ) ).toBeVisible();
-		await saveScreenshot( page, 'login-passkey-step' );
+		await saveScreenshot( page.locator( '#login' ), 'login-passkey-step' );
 
 		releaseScript();
 		await expect( page ).toHaveURL( DASHBOARD );
@@ -110,7 +110,7 @@ test.describe( 'passkey second factor', () => {
 		await expect( loginStatus ).toContainText( /passkey/i );
 		await expect( loginStatus ).not.toContainText( /Waiting|Signing in/ );
 		await expect( page.locator( '.two-factor-passkey-start' ) ).toBeEnabled();
-		await saveScreenshot( page, 'login-passkey-failed' );
+		await saveScreenshot( page.locator( '#login' ), 'login-passkey-failed' );
 
 		await page.locator( '.backup-methods a' ).click();
 		await page.locator( '#authcode' ).fill( BACKUP_CODE );
@@ -155,7 +155,7 @@ test.describe( 'passkey second factor', () => {
 			await expect( rows( page ).first() ).toContainText( 'Editor key' );
 			await expect( page.locator( '.two-factor-passkey-add' ) ).toHaveCount( 0 );
 			await saveScreenshot(
-				page.locator( 'table.form-table', { has: page.locator( '.two-factor-methods-table' ) } ),
+				page.locator( '.two-factor-methods-table tr', { has: page.locator( '.two-factor-passkey-settings' ) } ),
 				'user-edit-other-user'
 			);
 
