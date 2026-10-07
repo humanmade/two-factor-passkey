@@ -70,7 +70,7 @@ class Two_Factor_Passkey extends Two_Factor_Provider {
 		wp_enqueue_style( 'two-factor-passkey-login' );
 
 		$options = Ceremony::get_request_options( $user );
-		$error = is_wp_error( $options ) ? $options : $this->last_error;
+		$error = $this->last_error ?? ( is_wp_error( $options ) ? $options : null );
 
 		if ( $error ) {
 			printf( '<p class="two-factor-passkey-error">%s</p>', esc_html( $error->get_error_message() ) );
