@@ -163,6 +163,8 @@ class Provider_Test extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'name="two_factor_passkey_response"', $output );
 		$this->assertStringContainsString( 'data-options="', $output );
+		$this->assertStringContainsString( 'two-factor-passkey-start', $output );
+		$this->assertTrue( wp_script_is( 'two-factor-passkey-login', 'enqueued' ) );
 	}
 
 	public function test_authentication_page_prints_no_options_when_no_key_is_usable() {
@@ -170,6 +172,7 @@ class Provider_Test extends WP_UnitTestCase {
 		$this->register( $authenticator );
 		Credential_Store::update( $this->user_id, $authenticator->get_id(), [ 'flagged_at' => time() ] );
 		Two_Factor_Core::create_login_nonce( $this->user_id );
+		wp_dequeue_script( 'two-factor-passkey-login' );
 
 		ob_start();
 		$this->provider->authentication_page( $this->user );
@@ -178,6 +181,8 @@ class Provider_Test extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'data-options', $output );
 		$this->assertStringNotContainsString( 'name="two_factor_passkey_response"', $output );
 		$this->assertStringContainsString( 'two-factor-passkey-error', $output );
+		$this->assertStringNotContainsString( 'two-factor-passkey-start', $output );
+		$this->assertFalse( wp_script_is( 'two-factor-passkey-login', 'enqueued' ) );
 	}
 
 	public function test_enable_provider_for_user_adds_the_key_once() {

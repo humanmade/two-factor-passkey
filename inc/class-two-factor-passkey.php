@@ -9,6 +9,7 @@
 
 use HM\Two_Factor_Passkey\Ceremony;
 use HM\Two_Factor_Passkey\Credential_Store;
+use HM\Two_Factor_Passkey\Profile_UI;
 
 /**
  * Passkey (WebAuthn) second factor.
@@ -44,6 +45,14 @@ class Two_Factor_Passkey extends Two_Factor_Provider {
 	}
 
 	/**
+	 * Hook the passkey settings into the Two Factor options table.
+	 */
+	protected function __construct() {
+		add_action( 'two-factor-user-options-' . __CLASS__, [ Profile_UI::class, 'render' ] );
+		parent::__construct();
+	}
+
+	/**
 	 * Get the provider name.
 	 *
 	 * @return string
@@ -68,9 +77,16 @@ class Two_Factor_Passkey extends Two_Factor_Provider {
 		if ( is_wp_error( $options ) ) {
 			return;
 		}
+
+		wp_enqueue_script( 'two-factor-passkey-login' );
 		?>
 		<div class="two-factor-passkey-login" data-options="<?php echo esc_attr( wp_json_encode( $options ) ); ?>">
 			<p><?php esc_html_e( 'Use your passkey or security key to finish signing in.', 'two-factor-passkey' ); ?></p>
+			<p class="two-factor-passkey-unsupported" hidden><?php esc_html_e( 'This browser cannot use passkeys. Use another method below.', 'two-factor-passkey' ); ?></p>
+			<p>
+				<button type="button" class="button button-primary button-large two-factor-passkey-start"><?php esc_html_e( 'Use passkey', 'two-factor-passkey' ); ?></button>
+			</p>
+			<p class="two-factor-passkey-status" role="status" aria-live="polite"></p>
 			<input type="hidden" name="<?php echo esc_attr( self::RESPONSE_FIELD ); ?>" value="" />
 			<noscript><p><?php esc_html_e( 'Passkeys need JavaScript. Turn it on, or use another method.', 'two-factor-passkey' ); ?></p></noscript>
 		</div>
