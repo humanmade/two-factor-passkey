@@ -4,7 +4,7 @@ Two Factor Passkey adds passkeys (WebAuthn) as a second-factor provider for the 
 
 It is a second factor only. A passkey is a second step after the password, like an authenticator app code. There is no passwordless sign-in.
 
-The plugin targets the `master` branch of [humanmade/two-factor](https://github.com/humanmade/two-factor). It is not tested against upstream [WordPress/two-factor](https://github.com/WordPress/two-factor) or the fork's 0.3.x tags.
+The plugin targets the `0.3.4` tag of [humanmade/two-factor](https://github.com/humanmade/two-factor). That is upstream [WordPress/two-factor](https://github.com/WordPress/two-factor) 0.8.1 plus force-2FA, and the version Altis pins. It is not tested against the fork's `master` branch, other tags, or upstream.
 
 The design notes are in [docs/PLAN.md](docs/PLAN.md).
 
@@ -12,7 +12,7 @@ The design notes are in [docs/PLAN.md](docs/PLAN.md).
 
 - PHP 8.2 or later, with `ext-openssl` and `ext-mbstring`.
 - WordPress 6.6 or later.
-- The Human Made fork of Two Factor, active as a plugin or an mu-plugin.
+- The Human Made fork of Two Factor at 0.3.4, active as a plugin or an mu-plugin.
 - HTTPS. Plain HTTP works only on `localhost`.
 
 ## Installation
@@ -40,7 +40,11 @@ If Two Factor is not active, the plugin shows an admin notice and does nothing e
 
 ## Using it
 
-Users add passkeys under Profile, then Two-Factor Options. Adding the first passkey turns the provider on.
+Users add passkeys under Profile, then Two-Factor Options. Adding the first passkey turns the provider on and counts as passing two-factor for the current session.
+
+Adding, renaming or removing a passkey needs a recent two-factor session, as for every Two Factor setting. When the session is too old, revalidate with a passkey or another method first.
+
+A passkey cannot be removed if it is the user's last passkey usable on this site and no other second-factor method is available.
 
 Administrators can rename and remove other users' passkeys. They cannot add them, because a passkey made by someone else would live on the wrong device.
 
@@ -48,7 +52,7 @@ At login, the passkey step comes after the password. The backup methods the user
 
 ## How it works
 
-- Challenges are single use and expire after 5 minutes. Each one is tied to the user, the ceremony (register or sign in) and the login nonce.
+- Challenges are single use and expire after 5 minutes. Each one is tied to the user, the ceremony (register or sign in) and the login attempt. At sign-in that is the login nonce. At revalidation it is the session.
 - Responses are accepted only from an exact list of origins. The list is built from the site, admin and login URLs.
 - Attestation is `none`, so no trust decision rests on attestation.
 - User verification is preferred, not required.
@@ -85,14 +89,6 @@ if ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_P
 ```
 
 Origins come from the configured URLs, never from request headers.
-
-## Known limitations
-
-These come from the fork's `master` branch, not from this plugin.
-
-- XML-RPC and application-password logins skip every second factor, because there is no `authenticate` filter.
-- There is no rate limiting on the second-factor step.
-- There is no re-authentication before adding a passkey.
 
 ## Hooks
 
