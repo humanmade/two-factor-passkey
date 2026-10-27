@@ -7,6 +7,7 @@
 
 namespace HM\Two_Factor_Passkey;
 
+use Two_Factor_Core;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -88,7 +89,7 @@ class REST_Controller {
 				[
 					'methods' => WP_REST_Server::EDITABLE,
 					'callback' => [ self::class, 'update_passkey' ],
-					'permission_callback' => [ self::class, 'can_manage' ],
+					'permission_callback' => [ self::class, 'can_change' ],
 					'args' => [
 						'name' => [
 							'type' => 'string',
@@ -99,7 +100,7 @@ class REST_Controller {
 				[
 					'methods' => WP_REST_Server::DELETABLE,
 					'callback' => [ self::class, 'delete_passkey' ],
-					'permission_callback' => [ self::class, 'can_manage' ],
+					'permission_callback' => [ self::class, 'can_change' ],
 				],
 			]
 		);
@@ -133,6 +134,21 @@ class REST_Controller {
 	}
 
 	/**
+	 * Allow renaming and removing passkeys for users you can edit, once the session has passed two-factor revalidation.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return true|WP_Error
+	 */
+	public static function can_change( WP_REST_Request $request ) {
+		$check = self::can_manage( $request );
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		return self::check_revalidated( (int) $request['user_id'] );
+	}
+
+	/**
 	 * Allow adding passkeys only to your own account.
 	 *
 	 * A passkey created by someone else would live on their device, not the user's.
@@ -154,7 +170,7 @@ class REST_Controller {
 			);
 		}
 
-		return true;
+		return self::check_revalidated( (int) $request['user_id'] );
 	}
 
 	/**
@@ -300,6 +316,22 @@ class REST_Controller {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Require the session to be allowed to change Two Factor settings.
+	 *
+	 * @param int $user_id ID of the user being changed.
+	 * @return true|WP_Error
+	 */
+	private static function check_revalidated( int $user_id ) {
+		$allowed = Two_Factor_Core::rest_api_can_edit_user_and_update_two_factor_options( $user_id );
+		if ( is_wp_error( $allowed ) ) {
+			$allowed->add_data( [ 'status' => rest_authorization_required_code() ], $allowed->get_error_code() );
+			return $allowed;
+		}
+
+		return $allowed === true ? true : self::forbidden();
 	}
 
 	/**

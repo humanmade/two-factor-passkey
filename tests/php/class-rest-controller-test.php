@@ -10,6 +10,7 @@ namespace HM\Two_Factor_Passkey\Tests;
 use HM\Two_Factor_Passkey\Ceremony;
 use HM\Two_Factor_Passkey\Challenge_Store;
 use HM\Two_Factor_Passkey\Credential_Store;
+use function HM\Two_Factor_Passkey\enable_provider_for_user;
 use HM\Two_Factor_Passkey\REST_Controller;
 use Two_Factor_Core;
 use WP_REST_Request;
@@ -20,6 +21,7 @@ use WP_UnitTestCase;
  */
 class REST_Controller_Test extends WP_UnitTestCase {
 
+	use Session;
 	use Site_Url;
 
 	/**
@@ -50,6 +52,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function tear_down() {
 		unset( $GLOBALS['wp_rest_application_password_uuid'] );
+		$this->end_sessions();
 
 		parent::tear_down();
 	}
@@ -65,7 +68,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 	 * @return \WP_REST_Response
 	 */
 	private function request( string $method, int $user_id, string $suffix = '', array $params = [], ?int $acting_user_id = null ) {
-		wp_set_current_user( $acting_user_id ?? $this->admin_id );
+		$this->resume_session( $acting_user_id ?? $this->admin_id );
 
 		$request = new WP_REST_Request( $method, "/two-factor-passkey/v1/users/{$user_id}/passkeys{$suffix}" );
 		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
@@ -285,6 +288,42 @@ class REST_Controller_Test extends WP_UnitTestCase {
 			[ 'Two_Factor_Email', 'Two_Factor_Passkey' ],
 			get_user_meta( $this->admin_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, true )
 		);
+	}
+
+	public function test_changing_routes_need_a_recent_two_factor_session() {
+		$this->add_credential( $this->admin_id, 'abc' );
+		enable_provider_for_user( $this->admin_id );
+		$this->start_session( $this->admin_id );
+		Two_Factor_Core::update_current_user_session( [ 'two-factor-login' => time() - HOUR_IN_SECONDS ] );
+
+		$requests = [
+			[ 'POST', '/options', [] ],
+			[ 'POST', '', [ 'credential' => [ 'id' => 'x' ] ] ],
+			[ 'PATCH', '/abc', [ 'name' => 'Phone' ] ],
+			[ 'DELETE', '/abc', [] ],
+		];
+		foreach ( $requests as list( $method, $suffix, $params ) ) {
+			$this->assert_error( 403, 'revalidation_required', $this->request( $method, $this->admin_id, $suffix, $params ) );
+		}
+
+		$this->assertSame( 'Key abc', Credential_Store::get( $this->admin_id, 'abc' )['name'] );
+		$this->assertSame( 200, $this->request( 'GET', $this->admin_id )->get_status() );
+	}
+
+	public function test_changing_routes_refuse_a_session_that_never_passed_two_factor() {
+		$this->add_credential( $this->admin_id, 'abc' );
+		enable_provider_for_user( $this->admin_id );
+		$this->start_session( $this->admin_id, false );
+
+		$this->assert_error( 403, 'revalidation_required', $this->request( 'PATCH', $this->admin_id, '/abc', [ 'name' => 'Phone' ] ) );
+	}
+
+	public function test_revalidated_session_can_change_passkeys() {
+		$this->add_credential( $this->admin_id, 'abc' );
+		enable_provider_for_user( $this->admin_id );
+		$this->start_session( $this->admin_id );
+
+		$this->assertSame( 200, $this->request( 'PATCH', $this->admin_id, '/abc', [ 'name' => 'Phone' ] )->get_status() );
 	}
 
 	public function test_create_with_a_bad_response_returns_the_ceremony_error() {
