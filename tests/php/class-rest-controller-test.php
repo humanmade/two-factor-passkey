@@ -290,6 +290,30 @@ class REST_Controller_Test extends WP_UnitTestCase {
 		);
 	}
 
+	public function test_first_passkey_marks_the_session_as_two_factor() {
+		$this->start_session( $this->admin_id, false );
+		$this->assertFalse( Two_Factor_Core::is_current_user_session_two_factor() );
+
+		$response = $this->request( 'POST', $this->admin_id, '', [ 'credential' => $this->creation_response( new Soft_Authenticator() ) ] );
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertNotFalse( Two_Factor_Core::is_current_user_session_two_factor() );
+		$this->assertSame( '', Two_Factor_Core::get_current_user_session()['two-factor-provider'] );
+		$this->assertSame( 200, $this->request( 'PATCH', $this->admin_id, '/' . $response->get_data()['id'], [ 'name' => 'Phone' ] )->get_status() );
+	}
+
+	public function test_a_later_passkey_keeps_the_session_login_time() {
+		update_user_meta( $this->admin_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, [ 'Two_Factor_Email' ] );
+		$this->start_session( $this->admin_id );
+		$logged_in_at = time() - 300;
+		Two_Factor_Core::update_current_user_session( [ 'two-factor-login' => $logged_in_at ] );
+
+		$response = $this->request( 'POST', $this->admin_id, '', [ 'credential' => $this->creation_response( new Soft_Authenticator() ) ] );
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( $logged_in_at, Two_Factor_Core::is_current_user_session_two_factor() );
+	}
+
 	public function test_changing_routes_need_a_recent_two_factor_session() {
 		$this->add_credential( $this->admin_id, 'abc' );
 		enable_provider_for_user( $this->admin_id );

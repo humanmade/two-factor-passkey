@@ -203,6 +203,7 @@ class REST_Controller {
 	 */
 	public static function create_passkey( WP_REST_Request $request ) {
 		$user = self::get_user( $request );
+		$was_using_two_factor = Two_Factor_Core::is_user_using_two_factor( $user );
 		$credential = Ceremony::verify_registration(
 			$user,
 			(string) wp_json_encode( $request['credential'] ),
@@ -213,6 +214,16 @@ class REST_Controller {
 		}
 
 		enable_provider_for_user( $user->ID );
+
+		if ( ! $was_using_two_factor && ! Two_Factor_Core::is_current_user_session_two_factor() ) {
+			// The user just proved possession of the new passkey, so this session counts as two-factor.
+			Two_Factor_Core::update_current_user_session(
+				[
+					'two-factor-provider' => '',
+					'two-factor-login' => time(),
+				]
+			);
+		}
 
 		$response = rest_ensure_response( self::prepare_item( $credential ) );
 		$response->set_status( 201 );
