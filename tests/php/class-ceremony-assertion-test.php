@@ -9,6 +9,7 @@ namespace HM\Two_Factor_Passkey\Tests;
 
 use HM\Two_Factor_Passkey\Base64url;
 use HM\Two_Factor_Passkey\Ceremony;
+use HM\Two_Factor_Passkey\Challenge_Store;
 use HM\Two_Factor_Passkey\Credential_Store;
 use Two_Factor_Core;
 use WP_UnitTestCase;
@@ -19,6 +20,7 @@ use WP_User;
  */
 class Ceremony_Assertion_Test extends WP_UnitTestCase {
 
+	use Session;
 	use Site_Url;
 
 	/**
@@ -54,6 +56,13 @@ class Ceremony_Assertion_Test extends WP_UnitTestCase {
 		$this->register( $this->user, $this->authenticator );
 	}
 
+	public function tear_down() {
+		unset( $_REQUEST['action'] );
+		$this->end_sessions();
+
+		parent::tear_down();
+	}
+
 	/**
 	 * Register an authenticator for a user.
 	 *
@@ -77,6 +86,19 @@ class Ceremony_Assertion_Test extends WP_UnitTestCase {
 		$nonce = Two_Factor_Core::create_login_nonce( $user->ID )['key'];
 
 		return [ Ceremony::get_request_options( $user ), $nonce ];
+	}
+
+	/**
+	 * Start a revalidation page in a new session and request options.
+	 *
+	 * @return array{0: array|\WP_Error, 1: string, 2: string} Options, the revalidation nonce and the session token.
+	 */
+	private function begin_revalidation(): array {
+		$token = $this->start_session( $this->user_id );
+		$_REQUEST['action'] = 'revalidate_2fa';
+		$nonce = wp_create_nonce( 'two_factor_revalidate_' . $this->user_id );
+
+		return [ Ceremony::get_request_options( $this->user ), $nonce, $token ];
 	}
 
 	/**
@@ -402,5 +424,71 @@ class Ceremony_Assertion_Test extends WP_UnitTestCase {
 		list( , $nonce ) = $this->begin_login();
 
 		$this->assert_error( 'response_invalid', Ceremony::verify_assertion( $this->user, 'not json', $nonce ) );
+	}
+
+	public function test_revalidation_works_without_a_login_nonce() {
+		list( $options, $nonce ) = $this->begin_revalidation();
+		$this->assertIsArray( $options );
+		$this->assertEmpty( get_user_meta( $this->user_id, Two_Factor_Core::USER_META_NONCE_KEY, true ) );
+
+		$result = Ceremony::verify_assertion( $this->user, $this->authenticator->get( $options ), $nonce );
+
+		$this->assertIsArray( $result );
+	}
+
+	public function test_revalidation_challenge_is_bound_to_a_hash_of_the_session_token() {
+		list( , , $token ) = $this->begin_revalidation();
+		$this->assertNull( Challenge_Store::consume( $this->user_id, Challenge_Store::GET, $token ) );
+
+		list( , , $token ) = $this->begin_revalidation();
+		$this->assertNotNull( Challenge_Store::consume( $this->user_id, Challenge_Store::GET, hash( 'sha256', $token ) ) );
+	}
+
+	public function test_revalidation_rejects_a_response_from_another_session() {
+		list( $options, $nonce ) = $this->begin_revalidation();
+		$response = $this->authenticator->get( $options );
+		$this->start_session( $this->user_id );
+
+		$this->assert_error( 'challenge_invalid', Ceremony::verify_assertion( $this->user, $response, $nonce ) );
+	}
+
+	public function test_revalidation_rejects_a_wrong_nonce() {
+		list( $options ) = $this->begin_revalidation();
+
+		$this->assert_error( 'challenge_invalid', Ceremony::verify_assertion( $this->user, $this->authenticator->get( $options ), 'wrong-nonce' ) );
+	}
+
+	public function test_revalidation_rejects_a_login_nonce() {
+		list( $options ) = $this->begin_revalidation();
+		$login_nonce = Two_Factor_Core::create_login_nonce( $this->user_id )['key'];
+
+		$this->assert_error( 'challenge_invalid', Ceremony::verify_assertion( $this->user, $this->authenticator->get( $options ), $login_nonce ) );
+	}
+
+	public function test_revalidation_challenge_is_single_use() {
+		list( $options, $nonce ) = $this->begin_revalidation();
+		$response = $this->authenticator->get( $options );
+
+		$this->assertIsArray( Ceremony::verify_assertion( $this->user, $response, $nonce ) );
+		$this->assert_error( 'challenge_invalid', Ceremony::verify_assertion( $this->user, $response, $nonce ) );
+	}
+
+	public function test_leftover_session_does_not_turn_a_login_into_a_revalidation() {
+		$this->start_session( $this->user_id );
+
+		$this->assertIsArray( $this->login() );
+	}
+
+	public function test_revalidation_action_without_a_session_uses_the_login_nonce() {
+		$_REQUEST['action'] = 'revalidate_2fa';
+
+		$this->assert_error( 'login_nonce_missing', Ceremony::get_request_options( $this->user ) );
+	}
+
+	public function test_revalidation_action_for_another_user_is_not_a_revalidation() {
+		$this->start_session( self::factory()->user->create() );
+		$_REQUEST['action'] = 'revalidate_2fa';
+
+		$this->assert_error( 'login_nonce_missing', Ceremony::get_request_options( $this->user ) );
 	}
 }
