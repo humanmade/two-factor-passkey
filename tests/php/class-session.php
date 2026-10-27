@@ -13,9 +13,9 @@ use WP_Session_Tokens;
 /**
  * Creates logged-in browser sessions.
  *
- * wp_set_current_user() sets no cookie, so wp_get_session_token() would be empty.
- * These helpers store a session token and put the matching logged-in cookie in
- * $_COOKIE, which is where Two Factor looks for the current session.
+ * Setting the current user sets no cookie, so wp_get_session_token() would be
+ * empty. These helpers store a session token and put the matching logged-in
+ * cookie in $_COOKIE, which is where Two Factor looks for the current session.
  */
 trait Session {
 

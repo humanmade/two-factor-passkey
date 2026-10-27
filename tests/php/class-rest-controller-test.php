@@ -10,7 +10,6 @@ namespace HM\Two_Factor_Passkey\Tests;
 use HM\Two_Factor_Passkey\Ceremony;
 use HM\Two_Factor_Passkey\Challenge_Store;
 use HM\Two_Factor_Passkey\Credential_Store;
-use function HM\Two_Factor_Passkey\enable_provider_for_user;
 use HM\Two_Factor_Passkey\REST_Controller;
 use Two_Factor_Core;
 use WP_REST_Request;
@@ -316,7 +315,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function test_changing_routes_need_a_recent_two_factor_session() {
 		$this->add_credential( $this->admin_id, 'abc' );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 		$this->start_session( $this->admin_id );
 		Two_Factor_Core::update_current_user_session( [ 'two-factor-login' => time() - HOUR_IN_SECONDS ] );
 
@@ -336,7 +335,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function test_changing_routes_refuse_a_session_that_never_passed_two_factor() {
 		$this->add_credential( $this->admin_id, 'abc' );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 		$this->start_session( $this->admin_id, false );
 
 		$this->assert_error( 403, 'revalidation_required', $this->request( 'PATCH', $this->admin_id, '/abc', [ 'name' => 'Phone' ] ) );
@@ -344,7 +343,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function test_revalidated_session_can_change_passkeys() {
 		$this->add_credential( $this->admin_id, 'abc' );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 		$this->start_session( $this->admin_id );
 
 		$this->assertSame( 200, $this->request( 'PATCH', $this->admin_id, '/abc', [ 'name' => 'Phone' ] )->get_status() );
@@ -428,7 +427,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function test_last_usable_passkey_cannot_be_removed_while_it_is_the_only_method() {
 		$this->add_credential( $this->admin_id, 'only' );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 
 		$response = $this->request( 'DELETE', $this->admin_id, '/only' );
 
@@ -439,7 +438,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 	public function test_a_passkey_for_another_rp_id_does_not_count_as_a_method() {
 		$this->add_credential( $this->admin_id, 'here' );
 		$this->add_credential( $this->admin_id, 'there', [ 'rp_id' => 'other.example' ] );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 
 		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/here' ) );
 		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/there' )->get_status() );
@@ -448,7 +447,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 	public function test_a_flagged_passkey_does_not_count_as_a_method() {
 		$this->add_credential( $this->admin_id, 'good' );
 		$this->add_credential( $this->admin_id, 'flagged', [ 'flagged_at' => time() ] );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 
 		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/flagged' )->get_status() );
 		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/good' ) );
@@ -457,7 +456,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 	public function test_a_passkey_can_be_removed_while_another_usable_one_remains() {
 		$this->add_credential( $this->admin_id, 'one' );
 		$this->add_credential( $this->admin_id, 'two' );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 
 		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/one' )->get_status() );
 		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/two' ) );
@@ -465,7 +464,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function test_last_passkey_can_be_removed_when_another_method_is_available() {
 		$this->add_credential( $this->admin_id, 'only' );
-		enable_provider_for_user( $this->admin_id );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
 		update_user_meta( $this->admin_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, [ 'Two_Factor_Passkey', 'Two_Factor_Email' ] );
 
 		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/only' )->get_status() );
