@@ -426,6 +426,51 @@ class REST_Controller_Test extends WP_UnitTestCase {
 		$this->assertNull( Credential_Store::get( $this->admin_id, 'abc' ) );
 	}
 
+	public function test_last_usable_passkey_cannot_be_removed_while_it_is_the_only_method() {
+		$this->add_credential( $this->admin_id, 'only' );
+		enable_provider_for_user( $this->admin_id );
+
+		$response = $this->request( 'DELETE', $this->admin_id, '/only' );
+
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $response );
+		$this->assertNotNull( Credential_Store::get( $this->admin_id, 'only' ) );
+	}
+
+	public function test_a_passkey_for_another_rp_id_does_not_count_as_a_method() {
+		$this->add_credential( $this->admin_id, 'here' );
+		$this->add_credential( $this->admin_id, 'there', [ 'rp_id' => 'other.example' ] );
+		enable_provider_for_user( $this->admin_id );
+
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/here' ) );
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/there' )->get_status() );
+	}
+
+	public function test_a_flagged_passkey_does_not_count_as_a_method() {
+		$this->add_credential( $this->admin_id, 'good' );
+		$this->add_credential( $this->admin_id, 'flagged', [ 'flagged_at' => time() ] );
+		enable_provider_for_user( $this->admin_id );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/flagged' )->get_status() );
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/good' ) );
+	}
+
+	public function test_a_passkey_can_be_removed_while_another_usable_one_remains() {
+		$this->add_credential( $this->admin_id, 'one' );
+		$this->add_credential( $this->admin_id, 'two' );
+		enable_provider_for_user( $this->admin_id );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/one' )->get_status() );
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/two' ) );
+	}
+
+	public function test_last_passkey_can_be_removed_when_another_method_is_available() {
+		$this->add_credential( $this->admin_id, 'only' );
+		enable_provider_for_user( $this->admin_id );
+		update_user_meta( $this->admin_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, [ 'Two_Factor_Passkey', 'Two_Factor_Email' ] );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/only' )->get_status() );
+	}
+
 	public function test_delete_unknown_id_is_not_found() {
 		$this->assert_error( 404, 'two_factor_passkey_not_found', $this->request( 'DELETE', $this->admin_id, '/nope' ) );
 	}

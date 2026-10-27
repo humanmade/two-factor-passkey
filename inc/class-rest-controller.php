@@ -270,6 +270,14 @@ class REST_Controller {
 			return self::not_found();
 		}
 
+		if ( self::is_last_method( $user_id, $credential ) ) {
+			return new WP_Error(
+				'two_factor_passkey_last_method',
+				__( 'This is your only two-factor method. Add another passkey or turn on another method before removing it.', 'two-factor-passkey' ),
+				[ 'status' => 400 ]
+			);
+		}
+
 		Credential_Store::delete( $user_id, $id );
 
 		return rest_ensure_response(
@@ -327,6 +335,31 @@ class REST_Controller {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Whether removing a passkey would leave the user with no way to pass two-factor login.
+	 *
+	 * Only passkeys that work on this site's RP ID count as a method, and only
+	 * while the passkey provider is turned on for the user.
+	 *
+	 * @param int   $user_id    User ID.
+	 * @param array $credential Passkey about to be removed.
+	 * @return bool
+	 */
+	private static function is_last_method( int $user_id, array $credential ): bool {
+		$usable = Credential_Store::get_usable( $user_id, Relying_Party::get_id() );
+		if ( ! isset( $usable[ $credential['id'] ] ) || count( $usable ) > 1 ) {
+			return false;
+		}
+
+		$providers = Two_Factor_Core::get_available_providers_for_user( $user_id );
+		if ( ! isset( $providers[ PROVIDER_KEY ] ) ) {
+			return false;
+		}
+
+		unset( $providers[ PROVIDER_KEY ] );
+		return $providers === [];
 	}
 
 	/**
