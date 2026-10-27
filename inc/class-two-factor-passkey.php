@@ -48,7 +48,7 @@ class Two_Factor_Passkey extends Two_Factor_Provider {
 	 * Hook the passkey settings into the Two Factor options table.
 	 */
 	protected function __construct() {
-		add_action( 'two-factor-user-options-' . __CLASS__, [ Profile_UI::class, 'render' ] );
+		add_action( 'two_factor_user_options_' . __CLASS__, [ Profile_UI::class, 'render' ] );
 		parent::__construct();
 	}
 
