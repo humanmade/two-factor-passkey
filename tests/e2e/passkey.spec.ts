@@ -112,13 +112,12 @@ test.describe( 'passkey second factor', () => {
 		await expect( page.locator( '.two-factor-passkey-start' ) ).toBeEnabled();
 		await saveScreenshot( page.locator( '#login' ), 'login-passkey-failed' );
 
-		await page.locator( '.backup-methods a' ).click();
+		await page.locator( '.backup-methods-wrap a' ).click();
 		await page.locator( '#authcode' ).fill( BACKUP_CODE );
-		await page.getByRole( 'button', { name: 'Submit' } ).click();
 		await expect( page ).toHaveURL( DASHBOARD );
 	} );
 
-	test( 'renames and removes a passkey', async () => {
+	test( 'renames a passkey and refuses to remove the last one', async () => {
 		await page.goto( '/wp-admin/profile.php' );
 		await expect( rows( page ) ).toHaveCount( 1 );
 
@@ -129,29 +128,35 @@ test.describe( 'passkey second factor', () => {
 
 		page.once( 'dialog', ( dialog ) => dialog.accept() );
 		await rows( page ).first().locator( '.two-factor-passkey-remove' ).click();
-		await expect( rows( page ) ).toHaveCount( 0 );
-		await expect( page.locator( '.two-factor-passkey-empty' ) ).toBeVisible();
-		await expect( status( page ) ).toHaveText( 'Passkey removed.' );
+		await expect( status( page ) ).toContainText( 'only two-factor method' );
+		await expect( rows( page ) ).toHaveCount( 1 );
 	} );
 
-	test( 'lets an admin remove another user\'s passkey', async ( { browser } ) => {
+	test( 'lets an admin remove another user\'s passkey but not their last one', async ( { browser } ) => {
 		const editorContext = await browser.newContext();
 		const editorPage = await editorContext.newPage();
 
 		try {
 			await login( editorPage, 'editor', 'password' );
 			await expect( editorPage ).toHaveURL( DASHBOARD );
-			await addVirtualAuthenticator( editorPage );
+			const editorAuthenticator = await addVirtualAuthenticator( editorPage );
 
 			await editorPage.goto( '/wp-admin/profile.php' );
 			await editorPage.locator( '#two-factor-passkey-new-name' ).fill( 'Editor key' );
 			await editorPage.locator( '.two-factor-passkey-add' ).click();
 			await expect( status( editorPage ) ).toHaveText( 'Passkey added.' );
 			await expect( rows( editorPage ) ).toHaveCount( 1 );
+
+			// A passkey the first authenticator already holds is excluded, so add the second one with another authenticator.
+			await removeVirtualAuthenticator( editorAuthenticator );
+			await addVirtualAuthenticator( editorPage );
+			await editorPage.locator( '#two-factor-passkey-new-name' ).fill( 'Editor spare key' );
+			await editorPage.locator( '.two-factor-passkey-add' ).click();
+			await expect( rows( editorPage ) ).toHaveCount( 2 );
 			const editorId = await editorPage.locator( '.two-factor-passkey-settings' ).getAttribute( 'data-user-id' );
 
 			await page.goto( `/wp-admin/user-edit.php?user_id=${ editorId }` );
-			await expect( rows( page ) ).toHaveCount( 1 );
+			await expect( rows( page ) ).toHaveCount( 2 );
 			await expect( rows( page ).first() ).toContainText( 'Editor key' );
 			await expect( page.locator( '.two-factor-passkey-add' ) ).toHaveCount( 0 );
 			await saveScreenshot(
@@ -161,13 +166,13 @@ test.describe( 'passkey second factor', () => {
 
 			page.once( 'dialog', ( dialog ) => dialog.accept() );
 			await rows( page ).first().locator( '.two-factor-passkey-remove' ).click();
-			await expect( rows( page ) ).toHaveCount( 0 );
+			await expect( rows( page ) ).toHaveCount( 1 );
 			await expect( status( page ) ).toHaveText( 'Passkey removed.' );
 
-			await logout( editorPage );
-			await login( editorPage, 'editor', 'password' );
-			await expect( editorPage ).toHaveURL( DASHBOARD );
-			await expect( editorPage.locator( '.two-factor-passkey-login' ) ).toHaveCount( 0 );
+			page.once( 'dialog', ( dialog ) => dialog.accept() );
+			await rows( page ).first().locator( '.two-factor-passkey-remove' ).click();
+			await expect( status( page ) ).toContainText( 'only two-factor method' );
+			await expect( rows( page ) ).toHaveCount( 1 );
 		} finally {
 			await editorContext.close();
 		}

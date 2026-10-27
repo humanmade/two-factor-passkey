@@ -60,7 +60,7 @@ test.describe( 'hardening', () => {
 		await expect( enabledCheckbox( author ) ).toBeChecked();
 		await saveScreenshot( author.locator( '#force_2fa_form' ), 'force-2fa-screen' );
 
-		await author.locator( '#force_2fa_form' ).getByRole( 'button', { name: 'Submit' } ).click();
+		await author.locator( '#force_2fa_form button.button-primary', { hasText: 'Submit' } ).click();
 		await expect( author ).toHaveURL( DASHBOARD );
 		await expect( author.locator( '#force_2fa_form' ) ).toHaveCount( 0 );
 
