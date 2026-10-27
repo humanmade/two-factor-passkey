@@ -11,7 +11,7 @@
 	"require-dev": {
 		"brianhenryie/strauss": "^0.30",
 		"humanmade/coding-standards": "^2.5",
-		"humanmade/two-factor": "dev-master",
+		"humanmade/two-factor": "0.3.4",
 		"lbuchs/webauthn": "^2.2",
 		"phpunit/phpunit": "^9.6",
 		"yoast/phpunit-polyfills": "^1.1"
