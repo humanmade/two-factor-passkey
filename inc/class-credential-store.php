@@ -10,7 +10,10 @@ namespace HM\Two_Factor_Passkey;
 /**
  * Reads and writes a user's passkeys.
  *
- * All credentials live in one meta value, keyed by base64url credential ID.
+ * All credentials live in one meta value, keyed by base64url credential ID. Each
+ * credential has: id (base64url), public_key (PEM), sign_count, rp_id, name, aaguid,
+ * transports, backup_eligible, backed_up, user_verified, created_at, last_used_at
+ * and flagged_at (timestamps or null).
  */
 class Credential_Store {
 
@@ -105,7 +108,7 @@ class Credential_Store {
 	 * Store a new credential.
 	 *
 	 * @param int   $user_id    User ID.
-	 * @param array $credential Credential record, see docs/PLAN.md for the shape.
+	 * @param array $credential Credential record, with the fields listed on this class.
 	 * @return bool False if a credential with this ID already exists.
 	 */
 	public static function add( int $user_id, array $credential ): bool {

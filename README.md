@@ -6,8 +6,6 @@ It is a second factor only. A passkey is a second step after the password, like 
 
 The plugin targets the `0.3.4` tag of [humanmade/two-factor](https://github.com/humanmade/two-factor). That is upstream [WordPress/two-factor](https://github.com/WordPress/two-factor) 0.8.1 plus force-2FA, and the version Altis pins. It is not tested against the fork's `master` branch, other tags, or upstream.
 
-The design notes are in [docs/PLAN.md](docs/PLAN.md).
-
 ## Requirements
 
 - PHP 8.2 or later, with `ext-openssl` and `ext-mbstring`.
