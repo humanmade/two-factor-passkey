@@ -273,7 +273,7 @@ class REST_Controller {
 		if ( self::is_last_method( $user_id, $credential ) ) {
 			return new WP_Error(
 				'two_factor_passkey_last_method',
-				__( 'This is your only two-factor method. Add another passkey or turn on another method before removing it.', 'two-factor-passkey' ),
+				__( 'This is the only two-factor method this account can use. Add another passkey or turn on another method before removing it.', 'two-factor-passkey' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -340,26 +340,46 @@ class REST_Controller {
 	/**
 	 * Whether removing a passkey would leave the user with no way to pass two-factor login.
 	 *
-	 * Only passkeys that work on this site's RP ID count as a method, and only
-	 * while the passkey provider is turned on for the user.
+	 * Flagged passkeys can always be removed. Otherwise removal is refused while
+	 * the passkey provider is turned on, no other method is available, and the
+	 * passkey is either the last one that works on this site's RP ID or the last
+	 * unflagged one on any site. Passkeys are stored for the whole network, so
+	 * removing another site's last passkey from here would turn off two-factor there.
 	 *
 	 * @param int   $user_id    User ID.
 	 * @param array $credential Passkey about to be removed.
 	 * @return bool
 	 */
 	private static function is_last_method( int $user_id, array $credential ): bool {
-		$usable = Credential_Store::get_usable( $user_id, Relying_Party::get_id() );
-		if ( ! isset( $usable[ $credential['id'] ] ) || count( $usable ) > 1 ) {
+		if ( ! empty( $credential['flagged_at'] ) ) {
+			return false;
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user || ! in_array( PROVIDER_KEY, Two_Factor_Core::get_enabled_providers_for_user( $user ), true ) ) {
 			return false;
 		}
 
 		$providers = Two_Factor_Core::get_available_providers_for_user( $user_id );
-		if ( ! isset( $providers[ PROVIDER_KEY ] ) ) {
+		unset( $providers[ PROVIDER_KEY ] );
+		if ( $providers !== [] ) {
 			return false;
 		}
 
-		unset( $providers[ PROVIDER_KEY ] );
-		return $providers === [];
+		$others = array_filter(
+			Credential_Store::get_all( $user_id ),
+			fn( array $other ): bool => $other['id'] !== $credential['id'] && empty( $other['flagged_at'] )
+		);
+		if ( $others === [] ) {
+			return true;
+		}
+
+		$rp_id = Relying_Party::get_id();
+		if ( $credential['rp_id'] !== $rp_id ) {
+			return false;
+		}
+
+		return array_filter( $others, fn( array $other ): bool => $other['rp_id'] === $rp_id ) === [];
 	}
 
 	/**

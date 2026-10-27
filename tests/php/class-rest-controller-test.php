@@ -444,6 +444,14 @@ class REST_Controller_Test extends WP_UnitTestCase {
 		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/there' )->get_status() );
 	}
 
+	public function test_the_last_passkey_for_another_rp_id_cannot_be_removed_from_here() {
+		$this->add_credential( $this->admin_id, 'there', [ 'rp_id' => 'other.example' ] );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/there' ) );
+		$this->assertNotNull( Credential_Store::get( $this->admin_id, 'there' ) );
+	}
+
 	public function test_a_flagged_passkey_does_not_count_as_a_method() {
 		$this->add_credential( $this->admin_id, 'good' );
 		$this->add_credential( $this->admin_id, 'flagged', [ 'flagged_at' => time() ] );
