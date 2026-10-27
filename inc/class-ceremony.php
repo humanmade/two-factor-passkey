@@ -149,7 +149,8 @@ class Ceremony {
 	/**
 	 * Get options for navigator.credentials.get() at the login step.
 	 *
-	 * Binds the challenge to the user's current Two Factor login nonce.
+	 * Binds the challenge to the user's current Two Factor login nonce. Two
+	 * Factor keeps only a hash of that nonce, so the stored hash is the binding.
 	 *
 	 * @param WP_User $user User signing in.
 	 * @return array|WP_Error PublicKeyCredentialRequestOptions as JSON-ready data.
@@ -164,8 +165,8 @@ class Ceremony {
 			return self::error( 'no_usable_credentials' );
 		}
 
-		$login_nonce = get_user_meta( $user->ID, Two_Factor_Core::USER_META_NONCE_KEY, true );
-		if ( ! is_array( $login_nonce ) || empty( $login_nonce['key'] ) ) {
+		$binding = self::get_login_binding( $user );
+		if ( $binding === '' ) {
 			return self::error( 'login_nonce_missing' );
 		}
 
@@ -185,7 +186,7 @@ class Ceremony {
 			return self::error( 'server_error', $e );
 		}
 
-		Challenge_Store::save( $user->ID, Challenge_Store::GET, $server->getChallenge()->getBinaryString(), (string) $login_nonce['key'] );
+		Challenge_Store::save( $user->ID, Challenge_Store::GET, $server->getChallenge()->getBinaryString(), $binding );
 
 		return json_decode( wp_json_encode( $args->publicKey ), true );
 	}
@@ -199,8 +200,10 @@ class Ceremony {
 	 * @return array|WP_Error The updated credential.
 	 */
 	public static function verify_assertion( WP_User $user, string $response, string $login_nonce ) {
-		$challenge = Challenge_Store::consume( $user->ID, Challenge_Store::GET, $login_nonce );
-		if ( $challenge === null ) {
+		$binding = self::get_login_binding( $user );
+		$nonce_valid = Two_Factor_Core::verify_login_nonce( $user->ID, $login_nonce );
+		$challenge = Challenge_Store::consume( $user->ID, Challenge_Store::GET, $binding );
+		if ( ! $nonce_valid || $challenge === null ) {
 			return self::error( 'challenge_invalid' );
 		}
 
@@ -261,6 +264,21 @@ class Ceremony {
 		Credential_Store::update( $user->ID, $credential['id'], $changes );
 
 		return array_merge( $credential, $changes );
+	}
+
+	/**
+	 * Get the stored hash of the user's Two Factor login nonce.
+	 *
+	 * @param WP_User $user User signing in.
+	 * @return string Empty if the user has no login nonce.
+	 */
+	private static function get_login_binding( WP_User $user ): string {
+		$login_nonce = get_user_meta( $user->ID, Two_Factor_Core::USER_META_NONCE_KEY, true );
+		if ( ! is_array( $login_nonce ) || empty( $login_nonce['key'] ) ) {
+			return '';
+		}
+
+		return (string) $login_nonce['key'];
 	}
 
 	/**

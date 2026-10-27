@@ -52,7 +52,7 @@ class Challenge_Store {
 	 * @param int    $user_id   User ID.
 	 * @param string $ceremony  self::CREATE or self::GET.
 	 * @param string $challenge Binary challenge.
-	 * @param string $nonce     Optional login nonce to bind the challenge to.
+	 * @param string $nonce     Optional value to bind the challenge to, such as the login nonce hash.
 	 */
 	public static function save( int $user_id, string $ceremony, string $challenge, string $nonce = '' ): void {
 		self::assert_ceremony( $ceremony );
@@ -74,8 +74,8 @@ class Challenge_Store {
 	 *
 	 * @param int    $user_id  User ID.
 	 * @param string $ceremony self::CREATE or self::GET.
-	 * @param string $nonce    The login nonce, required if the challenge was bound to one.
-	 * @return string|null Binary challenge, or null if missing, expired, for another RP ID or nonce.
+	 * @param string $nonce    The bound value, required if the challenge was bound to one.
+	 * @return string|null Binary challenge, or null if missing, expired, for another RP ID or bound value.
 	 */
 	public static function consume( int $user_id, string $ceremony, string $nonce = '' ): ?string {
 		self::assert_ceremony( $ceremony );
@@ -110,9 +110,9 @@ class Challenge_Store {
 	}
 
 	/**
-	 * Hash a login nonce so the raw value is not stored twice.
+	 * Hash a bound value so it is not stored in the clear.
 	 *
-	 * @param string $nonce Login nonce.
+	 * @param string $nonce Bound value.
 	 * @return string
 	 */
 	private static function hash_nonce( string $nonce ): string {

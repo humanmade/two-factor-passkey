@@ -225,6 +225,23 @@ class Ceremony_Assertion_Test extends WP_UnitTestCase {
 		$this->assert_error( 'challenge_invalid', Ceremony::verify_assertion( $this->user, $this->authenticator->get( $options ), '' ) );
 	}
 
+	public function test_login_works_with_the_hashed_login_nonce_two_factor_stores() {
+		list( $options, $nonce ) = $this->begin_login();
+
+		$stored = get_user_meta( $this->user_id, Two_Factor_Core::USER_META_NONCE_KEY, true );
+		$this->assertNotSame( $nonce, $stored['key'] );
+
+		$this->assertIsArray( Ceremony::verify_assertion( $this->user, $this->authenticator->get( $options ), $nonce ) );
+	}
+
+	public function test_new_login_nonce_invalidates_the_pending_challenge() {
+		list( $options ) = $this->begin_login();
+		$response = $this->authenticator->get( $options );
+		$new_nonce = Two_Factor_Core::create_login_nonce( $this->user_id )['key'];
+
+		$this->assert_error( 'challenge_invalid', Ceremony::verify_assertion( $this->user, $response, $new_nonce ) );
+	}
+
 	public function test_replay_is_rejected() {
 		list( $options, $nonce ) = $this->begin_login();
 		$response = $this->authenticator->get( $options );
