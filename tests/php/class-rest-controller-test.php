@@ -20,6 +20,7 @@ use WP_UnitTestCase;
  */
 class REST_Controller_Test extends WP_UnitTestCase {
 
+	use Session;
 	use Site_Url;
 
 	/**
@@ -50,6 +51,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 
 	public function tear_down() {
 		unset( $GLOBALS['wp_rest_application_password_uuid'] );
+		$this->end_sessions();
 
 		parent::tear_down();
 	}
@@ -65,7 +67,7 @@ class REST_Controller_Test extends WP_UnitTestCase {
 	 * @return \WP_REST_Response
 	 */
 	private function request( string $method, int $user_id, string $suffix = '', array $params = [], ?int $acting_user_id = null ) {
-		wp_set_current_user( $acting_user_id ?? $this->admin_id );
+		$this->resume_session( $acting_user_id ?? $this->admin_id );
 
 		$request = new WP_REST_Request( $method, "/two-factor-passkey/v1/users/{$user_id}/passkeys{$suffix}" );
 		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
@@ -287,6 +289,66 @@ class REST_Controller_Test extends WP_UnitTestCase {
 		);
 	}
 
+	public function test_first_passkey_marks_the_session_as_two_factor() {
+		$this->start_session( $this->admin_id, false );
+		$this->assertFalse( Two_Factor_Core::is_current_user_session_two_factor() );
+
+		$response = $this->request( 'POST', $this->admin_id, '', [ 'credential' => $this->creation_response( new Soft_Authenticator() ) ] );
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertNotFalse( Two_Factor_Core::is_current_user_session_two_factor() );
+		$this->assertSame( '', Two_Factor_Core::get_current_user_session()['two-factor-provider'] );
+		$this->assertSame( 200, $this->request( 'PATCH', $this->admin_id, '/' . $response->get_data()['id'], [ 'name' => 'Phone' ] )->get_status() );
+	}
+
+	public function test_a_later_passkey_keeps_the_session_login_time() {
+		update_user_meta( $this->admin_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, [ 'Two_Factor_Email' ] );
+		$this->start_session( $this->admin_id );
+		$logged_in_at = time() - 300;
+		Two_Factor_Core::update_current_user_session( [ 'two-factor-login' => $logged_in_at ] );
+
+		$response = $this->request( 'POST', $this->admin_id, '', [ 'credential' => $this->creation_response( new Soft_Authenticator() ) ] );
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( $logged_in_at, Two_Factor_Core::is_current_user_session_two_factor() );
+	}
+
+	public function test_changing_routes_need_a_recent_two_factor_session() {
+		$this->add_credential( $this->admin_id, 'abc' );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+		$this->start_session( $this->admin_id );
+		Two_Factor_Core::update_current_user_session( [ 'two-factor-login' => time() - HOUR_IN_SECONDS ] );
+
+		$requests = [
+			[ 'POST', '/options', [] ],
+			[ 'POST', '', [ 'credential' => [ 'id' => 'x' ] ] ],
+			[ 'PATCH', '/abc', [ 'name' => 'Phone' ] ],
+			[ 'DELETE', '/abc', [] ],
+		];
+		foreach ( $requests as list( $method, $suffix, $params ) ) {
+			$this->assert_error( 403, 'revalidation_required', $this->request( $method, $this->admin_id, $suffix, $params ) );
+		}
+
+		$this->assertSame( 'Key abc', Credential_Store::get( $this->admin_id, 'abc' )['name'] );
+		$this->assertSame( 200, $this->request( 'GET', $this->admin_id )->get_status() );
+	}
+
+	public function test_changing_routes_refuse_a_session_that_never_passed_two_factor() {
+		$this->add_credential( $this->admin_id, 'abc' );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+		$this->start_session( $this->admin_id, false );
+
+		$this->assert_error( 403, 'revalidation_required', $this->request( 'PATCH', $this->admin_id, '/abc', [ 'name' => 'Phone' ] ) );
+	}
+
+	public function test_revalidated_session_can_change_passkeys() {
+		$this->add_credential( $this->admin_id, 'abc' );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+		$this->start_session( $this->admin_id );
+
+		$this->assertSame( 200, $this->request( 'PATCH', $this->admin_id, '/abc', [ 'name' => 'Phone' ] )->get_status() );
+	}
+
 	public function test_create_with_a_bad_response_returns_the_ceremony_error() {
 		$credential = $this->creation_response( new Soft_Authenticator(), [ 'origin' => 'https://evil.example' ] );
 
@@ -361,6 +423,59 @@ class REST_Controller_Test extends WP_UnitTestCase {
 		$this->assertSame( 'abc', $data['previous']['id'] );
 		$this->assertSame( 'Old', $data['previous']['name'] );
 		$this->assertNull( Credential_Store::get( $this->admin_id, 'abc' ) );
+	}
+
+	public function test_last_usable_passkey_cannot_be_removed_while_it_is_the_only_method() {
+		$this->add_credential( $this->admin_id, 'only' );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+
+		$response = $this->request( 'DELETE', $this->admin_id, '/only' );
+
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $response );
+		$this->assertNotNull( Credential_Store::get( $this->admin_id, 'only' ) );
+	}
+
+	public function test_a_passkey_for_another_rp_id_does_not_count_as_a_method() {
+		$this->add_credential( $this->admin_id, 'here' );
+		$this->add_credential( $this->admin_id, 'there', [ 'rp_id' => 'other.example' ] );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/here' ) );
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/there' )->get_status() );
+	}
+
+	public function test_the_last_passkey_for_another_rp_id_cannot_be_removed_from_here() {
+		$this->add_credential( $this->admin_id, 'there', [ 'rp_id' => 'other.example' ] );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/there' ) );
+		$this->assertNotNull( Credential_Store::get( $this->admin_id, 'there' ) );
+	}
+
+	public function test_a_flagged_passkey_does_not_count_as_a_method() {
+		$this->add_credential( $this->admin_id, 'good' );
+		$this->add_credential( $this->admin_id, 'flagged', [ 'flagged_at' => time() ] );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/flagged' )->get_status() );
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/good' ) );
+	}
+
+	public function test_a_passkey_can_be_removed_while_another_usable_one_remains() {
+		$this->add_credential( $this->admin_id, 'one' );
+		$this->add_credential( $this->admin_id, 'two' );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/one' )->get_status() );
+		$this->assert_error( 400, 'two_factor_passkey_last_method', $this->request( 'DELETE', $this->admin_id, '/two' ) );
+	}
+
+	public function test_last_passkey_can_be_removed_when_another_method_is_available() {
+		$this->add_credential( $this->admin_id, 'only' );
+		\HM\Two_Factor_Passkey\enable_provider_for_user( $this->admin_id );
+		update_user_meta( $this->admin_id, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, [ 'Two_Factor_Passkey', 'Two_Factor_Email' ] );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->admin_id, '/only' )->get_status() );
 	}
 
 	public function test_delete_unknown_id_is_not_found() {

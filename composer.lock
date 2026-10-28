@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3f37c4b314dab3963c9e4a3bfbb3bcb6",
+    "content-hash": "33b51e7ff04c8fbc42b6a415775e6580",
     "packages": [],
     "packages-dev": [
         {
@@ -1235,31 +1235,51 @@
         },
         {
             "name": "humanmade/two-factor",
-            "version": "dev-master",
+            "version": "0.3.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/humanmade/two-factor.git",
-                "reference": "59b577ad7d2a81a6ba847e2a0158fcd25dda761b"
+                "reference": "a151c71a824dda395040fe094317756d2b51abda"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/humanmade/two-factor/zipball/59b577ad7d2a81a6ba847e2a0158fcd25dda761b",
-                "reference": "59b577ad7d2a81a6ba847e2a0158fcd25dda761b",
+                "url": "https://api.github.com/repos/humanmade/two-factor/zipball/a151c71a824dda395040fe094317756d2b51abda",
+                "reference": "a151c71a824dda395040fe094317756d2b51abda",
                 "shasum": ""
             },
+            "require": {
+                "php": ">=5.6"
+            },
             "require-dev": {
-                "php-coveralls/php-coveralls": "^1.0",
-                "wp-coding-standards/wpcs": "^1.0",
-                "xwp/wp-dev-lib": "dev-master"
+                "automattic/vipwpcs": "^2.3",
+                "dealerdirect/phpcodesniffer-composer-installer": "^0.7.2",
+                "php-coveralls/php-coveralls": "^2.5",
+                "phpcompatibility/php-compatibility": "10.x-dev as 9.99.99",
+                "phpcompatibility/phpcompatibility-wp": "dev-master",
+                "phpunit/phpunit": "^9.5",
+                "roots/wordpress-core-installer": "^1.100",
+                "roots/wordpress-full": "~6.0",
+                "spatie/phpunit-watcher": "^1.23",
+                "wp-coding-standards/wpcs": "^2.3",
+                "wp-phpunit/wp-phpunit": "^6.0",
+                "yoast/phpunit-polyfills": "^1.0"
             },
-            "default-branch": true,
             "type": "wordpress-plugin",
-            "notification-url": "https://packagist.org/downloads/",
-            "description": "Two-Factor Authentication for WordPress.",
-            "support": {
-                "source": "https://github.com/humanmade/two-factor/tree/0.3.2"
+            "extra": {
+                "wordpress-install-dir": "wordpress"
             },
-            "time": "2023-01-16T15:04:51+00:00"
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Two-Factor Authentication for WordPress.",
+            "homepage": "https://wordpress.org/plugins/two-factor/",
+            "support": {
+                "forum": "https://wordpress.org/support/plugin/two-factor/",
+                "issues": "https://github.com/WordPress/two-factor/issues",
+                "source": "https://github.com/WordPress/two-factor"
+            },
+            "time": "2026-09-01T18:34:13+00:00"
         },
         {
             "name": "inmarelibero/gitignore-checker",
@@ -6624,9 +6644,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "humanmade/two-factor": 20
-    },
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

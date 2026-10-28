@@ -11,6 +11,7 @@ use HM\Two_Factor_Passkey\Base64url;
 use HM\Two_Factor_Passkey\Ceremony;
 use HM\Two_Factor_Passkey\Challenge_Store;
 use HM\Two_Factor_Passkey\Credential_Store;
+use Two_Factor_Core;
 use WP_UnitTestCase;
 
 /**
@@ -20,14 +21,19 @@ class Chromium_Fixture_Test extends WP_UnitTestCase {
 
 	use Site_Url;
 
-	const NONCE = 'fixture-nonce';
-
 	/**
 	 * Recorded ceremony.
 	 *
 	 * @var array
 	 */
 	private $fixture;
+
+	/**
+	 * Raw login nonce of the pending login.
+	 *
+	 * @var string
+	 */
+	private $nonce = '';
 
 	/**
 	 * User ID.
@@ -73,9 +79,11 @@ class Chromium_Fixture_Test extends WP_UnitTestCase {
 	 * @return array|\WP_Error
 	 */
 	private function authenticate( ?array $response = null ) {
-		Challenge_Store::save( $this->user_id, Challenge_Store::GET, Base64url::decode( $this->fixture['request_options']['challenge'] ), self::NONCE );
+		$this->nonce = Two_Factor_Core::create_login_nonce( $this->user_id )['key'];
+		$stored = get_user_meta( $this->user_id, Two_Factor_Core::USER_META_NONCE_KEY, true );
+		Challenge_Store::save( $this->user_id, Challenge_Store::GET, Base64url::decode( $this->fixture['request_options']['challenge'] ), $stored['key'] );
 
-		return Ceremony::verify_assertion( $this->user, wp_json_encode( $response ?? $this->fixture['assertion_response'] ), self::NONCE );
+		return Ceremony::verify_assertion( $this->user, wp_json_encode( $response ?? $this->fixture['assertion_response'] ), $this->nonce );
 	}
 
 	public function test_recorded_registration_verifies() {
@@ -104,7 +112,7 @@ class Chromium_Fixture_Test extends WP_UnitTestCase {
 		$this->assertNotWPError( $this->register() );
 		$this->assertNotWPError( $this->authenticate() );
 
-		$replay = Ceremony::verify_assertion( $this->user, wp_json_encode( $this->fixture['assertion_response'] ), self::NONCE );
+		$replay = Ceremony::verify_assertion( $this->user, wp_json_encode( $this->fixture['assertion_response'] ), $this->nonce );
 		$this->assertWPError( $replay );
 	}
 

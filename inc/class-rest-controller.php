@@ -7,6 +7,7 @@
 
 namespace HM\Two_Factor_Passkey;
 
+use Two_Factor_Core;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -88,7 +89,7 @@ class REST_Controller {
 				[
 					'methods' => WP_REST_Server::EDITABLE,
 					'callback' => [ self::class, 'update_passkey' ],
-					'permission_callback' => [ self::class, 'can_manage' ],
+					'permission_callback' => [ self::class, 'can_change' ],
 					'args' => [
 						'name' => [
 							'type' => 'string',
@@ -99,7 +100,7 @@ class REST_Controller {
 				[
 					'methods' => WP_REST_Server::DELETABLE,
 					'callback' => [ self::class, 'delete_passkey' ],
-					'permission_callback' => [ self::class, 'can_manage' ],
+					'permission_callback' => [ self::class, 'can_change' ],
 				],
 			]
 		);
@@ -133,6 +134,21 @@ class REST_Controller {
 	}
 
 	/**
+	 * Allow renaming and removing passkeys for users you can edit, once the session has passed two-factor revalidation.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return true|WP_Error
+	 */
+	public static function can_change( WP_REST_Request $request ) {
+		$check = self::can_manage( $request );
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		return self::check_revalidated( (int) $request['user_id'] );
+	}
+
+	/**
 	 * Allow adding passkeys only to your own account.
 	 *
 	 * A passkey created by someone else would live on their device, not the user's.
@@ -154,7 +170,7 @@ class REST_Controller {
 			);
 		}
 
-		return true;
+		return self::check_revalidated( (int) $request['user_id'] );
 	}
 
 	/**
@@ -187,6 +203,7 @@ class REST_Controller {
 	 */
 	public static function create_passkey( WP_REST_Request $request ) {
 		$user = self::get_user( $request );
+		$was_using_two_factor = Two_Factor_Core::is_user_using_two_factor( $user );
 		$credential = Ceremony::verify_registration(
 			$user,
 			(string) wp_json_encode( $request['credential'] ),
@@ -197,6 +214,16 @@ class REST_Controller {
 		}
 
 		enable_provider_for_user( $user->ID );
+
+		if ( ! $was_using_two_factor && ! Two_Factor_Core::is_current_user_session_two_factor() ) {
+			// The user just proved possession of the new passkey, so this session counts as two-factor.
+			Two_Factor_Core::update_current_user_session(
+				[
+					'two-factor-provider' => '',
+					'two-factor-login' => time(),
+				]
+			);
+		}
 
 		$response = rest_ensure_response( self::prepare_item( $credential ) );
 		$response->set_status( 201 );
@@ -241,6 +268,14 @@ class REST_Controller {
 		$credential = Credential_Store::get( $user_id, $id );
 		if ( $credential === null ) {
 			return self::not_found();
+		}
+
+		if ( self::is_last_method( $user_id, $credential ) ) {
+			return new WP_Error(
+				'two_factor_passkey_last_method',
+				__( 'This is the only two-factor method this account can use. Add another passkey or turn on another method before removing it.', 'two-factor-passkey' ),
+				[ 'status' => 400 ]
+			);
 		}
 
 		Credential_Store::delete( $user_id, $id );
@@ -300,6 +335,67 @@ class REST_Controller {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Whether removing a passkey would leave the user with no way to pass two-factor login.
+	 *
+	 * Flagged passkeys can always be removed. Otherwise removal is refused while
+	 * the passkey provider is turned on, no other method is available, and the
+	 * passkey is either the last one that works on this site's RP ID or the last
+	 * unflagged one on any site. Passkeys are stored for the whole network, so
+	 * removing another site's last passkey from here would turn off two-factor there.
+	 *
+	 * @param int   $user_id    User ID.
+	 * @param array $credential Passkey about to be removed.
+	 * @return bool
+	 */
+	private static function is_last_method( int $user_id, array $credential ): bool {
+		if ( ! empty( $credential['flagged_at'] ) ) {
+			return false;
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user || ! in_array( PROVIDER_KEY, Two_Factor_Core::get_enabled_providers_for_user( $user ), true ) ) {
+			return false;
+		}
+
+		$providers = Two_Factor_Core::get_available_providers_for_user( $user_id );
+		unset( $providers[ PROVIDER_KEY ] );
+		if ( $providers !== [] ) {
+			return false;
+		}
+
+		$others = array_filter(
+			Credential_Store::get_all( $user_id ),
+			fn( array $other ): bool => $other['id'] !== $credential['id'] && empty( $other['flagged_at'] )
+		);
+		if ( $others === [] ) {
+			return true;
+		}
+
+		$rp_id = Relying_Party::get_id();
+		if ( $credential['rp_id'] !== $rp_id ) {
+			return false;
+		}
+
+		return array_filter( $others, fn( array $other ): bool => $other['rp_id'] === $rp_id ) === [];
+	}
+
+	/**
+	 * Require the session to be allowed to change Two Factor settings.
+	 *
+	 * @param int $user_id ID of the user being changed.
+	 * @return true|WP_Error
+	 */
+	private static function check_revalidated( int $user_id ) {
+		$allowed = Two_Factor_Core::rest_api_can_edit_user_and_update_two_factor_options( $user_id );
+		if ( is_wp_error( $allowed ) ) {
+			$allowed->add_data( [ 'status' => rest_authorization_required_code() ], $allowed->get_error_code() );
+			return $allowed;
+		}
+
+		return $allowed === true ? true : self::forbidden();
 	}
 
 	/**

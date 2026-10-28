@@ -107,14 +107,11 @@
 
 		async function remove( row ) {
 			const name = row.querySelector( '.two-factor-passkey-name' ).textContent;
-			let message = sprintf(
+			const message = sprintf(
 				/* translators: %s: passkey name */
 				__( 'Remove the passkey “%s”? You will no longer be able to use it to sign in.', 'two-factor-passkey' ),
 				name
 			);
-			if ( rowCount() === 1 ) {
-				message += ' ' + __( 'If it is your only two-factor method, you will not be asked for a second step when you sign in.', 'two-factor-passkey' );
-			}
 			if ( ! window.confirm( message ) ) {
 				return;
 			}

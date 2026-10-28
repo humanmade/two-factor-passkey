@@ -180,7 +180,7 @@ class Profile_UI_Test extends WP_UnitTestCase {
 		Two_Factor_Core::get_providers();
 
 		ob_start();
-		do_action( 'two-factor-user-options-Two_Factor_Passkey', get_user_by( 'id', $this->admin_id ) ); // phpcs:ignore WordPress.NamingConventions.ValidHookName
+		do_action( 'two_factor_user_options_Two_Factor_Passkey', get_user_by( 'id', $this->admin_id ) ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( 'two-factor-passkey-settings', $output );

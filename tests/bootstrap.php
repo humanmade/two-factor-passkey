@@ -39,5 +39,6 @@ tests_add_filter(
 
 require $_tests_dir . '/includes/bootstrap.php';
 
+require_once __DIR__ . '/php/class-session.php';
 require_once __DIR__ . '/php/class-site-url.php';
 require_once __DIR__ . '/php/class-soft-authenticator.php';
