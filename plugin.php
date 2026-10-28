@@ -3,7 +3,7 @@
  * Plugin Name: Two Factor Passkey
  * Plugin URI: https://github.com/humanmade/two-factor-passkey
  * Description: Adds passkeys (WebAuthn) as a second-factor provider for the Human Made Two Factor plugin.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 6.6
  * Requires PHP: 8.2
  * Author: Human Made
@@ -17,7 +17,7 @@
 
 namespace HM\Two_Factor_Passkey;
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const PLUGIN_FILE = __FILE__;
 
 require_once __DIR__ . '/vendor-prefixed/autoload.php';
